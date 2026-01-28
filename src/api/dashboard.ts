@@ -1,0 +1,128 @@
+import { apiClient } from './client';
+
+export interface PaginateQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  searchBy?: string;
+  sortBy?: string;
+  include?: string;
+}
+
+export interface PaginateResult<T> {
+  data: T[];
+  meta: {
+    itemsPerPage: number;
+    totalItems: number;
+    currentPage: number;
+    totalPages: number;
+    sortBy: [string, 'ASC' | 'DESC'][];
+    search?: string;
+    searchBy?: string[];
+  };
+  links: {
+    first?: string;
+    previous?: string;
+    current: string;
+    next?: string;
+    last?: string;
+  };
+}
+
+export interface DashboardStats {
+  totalUsers: number;
+  totalCenters: number;
+  totalVehicles: number;
+  totalArrivals: number;
+  totalExits: number;
+  totalIncomingVehicles: number;
+  totalProcessingStages: number;
+  activeVehicles: number;
+  vehiclesWithQrCode: number;
+  recentArrivals: number;
+  recentExits: number;
+}
+
+export interface DashboardOverview {
+  stats: DashboardStats;
+  recentActivity: {
+    latestArrivals: any[];
+    latestExits: any[];
+    latestVehicles: any[];
+  };
+  summary: {
+    vehiclesByStatus: Record<string, number>;
+    arrivalsByStatus: Record<string, number>;
+    exitsByType: Record<string, number>;
+  };
+}
+
+export interface QrCodeResponse {
+  qrCodeDataUrl: string;
+  qrCodeString: string;
+  vehicleId: number;
+  vehicle: any;
+}
+
+export const dashboardApi = {
+  getOverview: async (): Promise<DashboardOverview> => {
+    const response = await apiClient.get<DashboardOverview>('/dashboard/overview');
+    return response.data;
+  },
+
+  getUsers: async (query?: PaginateQuery): Promise<PaginateResult<any>> => {
+    const response = await apiClient.get<PaginateResult<any>>('/dashboard/users', {
+      params: query,
+    });
+    return response.data;
+  },
+
+  getCenters: async (query?: PaginateQuery): Promise<PaginateResult<any>> => {
+    const response = await apiClient.get<PaginateResult<any>>('/dashboard/centers', {
+      params: query,
+    });
+    return response.data;
+  },
+
+  getVehicles: async (query?: PaginateQuery): Promise<PaginateResult<any>> => {
+    const response = await apiClient.get<PaginateResult<any>>('/dashboard/vehicles', {
+      params: query,
+    });
+    return response.data;
+  },
+
+  getArrivals: async (query?: PaginateQuery): Promise<PaginateResult<any>> => {
+    const response = await apiClient.get<PaginateResult<any>>('/dashboard/arrivals', {
+      params: query,
+    });
+    return response.data;
+  },
+
+  getExits: async (query?: PaginateQuery): Promise<PaginateResult<any>> => {
+    const response = await apiClient.get<PaginateResult<any>>('/dashboard/exits', {
+      params: query,
+    });
+    return response.data;
+  },
+
+  getIncomingVehicles: async (query?: PaginateQuery): Promise<PaginateResult<any>> => {
+    const response = await apiClient.get<PaginateResult<any>>('/dashboard/incoming-vehicles', {
+      params: query,
+    });
+    return response.data;
+  },
+
+  getProcessingStages: async (query?: PaginateQuery): Promise<PaginateResult<any>> => {
+    const response = await apiClient.get<PaginateResult<any>>('/dashboard/processing-stages', {
+      params: query,
+    });
+    return response.data;
+  },
+
+  generateQrCode: async (vehicleId: string | number): Promise<QrCodeResponse> => {
+    const response = await apiClient.post<QrCodeResponse>(
+      `/dashboard/vehicles/${vehicleId}/qr-code`
+    );
+    return response.data;
+  },
+};
