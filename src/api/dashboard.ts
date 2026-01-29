@@ -71,14 +71,14 @@ export const dashboardApi = {
   },
 
   getUsers: async (query?: PaginateQuery): Promise<PaginateResult<any>> => {
-    const response = await apiClient.get<PaginateResult<any>>('/dashboard/users', {
+    const response = await apiClient.get<PaginateResult<any>>('/users', {
       params: query,
     });
     return response.data;
   },
 
   getCenters: async (query?: PaginateQuery): Promise<PaginateResult<any>> => {
-    const response = await apiClient.get<PaginateResult<any>>('/dashboard/centers', {
+    const response = await apiClient.get<PaginateResult<any>>('/centers', {
       params: query,
     });
     return response.data;

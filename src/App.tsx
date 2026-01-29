@@ -5,6 +5,8 @@ import { useAuthStore } from './stores/auth.store';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Users from './pages/Users';
+import Centers from './pages/Centers';
 import Layout from './components/layout/Layout';
 
 // Create a client
@@ -40,6 +42,8 @@ function App() {
             }
           >
             <Route index element={<Dashboard />} />
+            <Route path="users" element={<Users />} />
+            <Route path="centers" element={<Centers />} />
           </Route>
         </Routes>
       </BrowserRouter>
