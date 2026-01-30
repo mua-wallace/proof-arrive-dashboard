@@ -22,7 +22,7 @@ export default function Users() {
   const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState('');
   const [searchBy, setSearchBy] = useState('username,accid');
-  const [sortBy, setSortBy] = useState('createdAt:DESC');
+  const [sortBy, setSortBy] = useState('lastLoginAt:DESC');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
   // Debounce search input
@@ -127,8 +127,8 @@ export default function Users() {
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
               >
-                <option value="createdAt:DESC">Newest First</option>
-                <option value="createdAt:ASC">Oldest First</option>
+                <option value="lastLoginAt:DESC">Last Login (Recent)</option>
+                <option value="lastLoginAt:ASC">Last Login (Oldest)</option>
                 <option value="username:ASC">Username A-Z</option>
                 <option value="username:DESC">Username Z-A</option>
                 <option value="accid:ASC">Account ID Asc</option>
@@ -210,7 +210,7 @@ export default function Users() {
                       <TableHead>Email</TableHead>
                       <TableHead>Company</TableHead>
                       <TableHead>
-                        <SortButton field="createdAt">Created At</SortButton>
+                        <SortButton field="lastLoginAt">Last Login</SortButton>
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -223,7 +223,7 @@ export default function Users() {
                         <TableCell>{user.email ?? 'N/A'}</TableCell>
                         <TableCell>{user.company ?? 'N/A'}</TableCell>
                         <TableCell>
-                          {user.createdAt ? formatDate(user.createdAt) : 'N/A'}
+                          {user.lastLoginAt ? formatDate(user.lastLoginAt) : 'N/A'}
                         </TableCell>
                       </TableRow>
                     ))}

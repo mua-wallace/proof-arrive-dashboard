@@ -125,4 +125,12 @@ export const dashboardApi = {
     );
     return response.data;
   },
+
+  /** Get vehicle QR code details by thirdPartyId (used for display in sheet) */
+  getVehicleQrCode: async (thirdPartyId: number): Promise<QrCodeResponse> => {
+    const response = await apiClient.get<QrCodeResponse>(
+      `/vehicles/qr-code/vehicle/${thirdPartyId}`
+    );
+    return response.data;
+  },
 };

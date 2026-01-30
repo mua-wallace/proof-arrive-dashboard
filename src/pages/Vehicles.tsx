@@ -14,8 +14,23 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Car, Search, ChevronLeft, ChevronRight, ArrowUpDown, Loader2, QrCode } from 'lucide-react';
+import {
+  Car,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpDown,
+  Loader2,
+  QrCode,
+  X,
+  ScanLine,
+  Hash,
+  Tag,
+  FileDown,
+} from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { formatDate, formatNumber } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 export default function Vehicles() {
   const [page, setPage] = useState(1);
@@ -24,6 +39,8 @@ export default function Vehicles() {
   const [searchBy, setSearchBy] = useState('plate,model,brand');
   const [sortBy, setSortBy] = useState('createdAt:DESC');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [qrSheetOpen, setQrSheetOpen] = useState(false);
+  const [qrSheetThirdPartyId, setQrSheetThirdPartyId] = useState<number | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -36,6 +53,7 @@ export default function Vehicles() {
   const query: PaginateQuery = {
     page,
     limit,
+    include: 'qrCodes',
     search: debouncedSearch || undefined,
     searchBy: searchBy || undefined,
     sortBy: sortBy || undefined,
@@ -47,7 +65,76 @@ export default function Vehicles() {
     keepPreviousData: true,
   });
 
+  const {
+    data: qrDetail,
+    isLoading: qrDetailLoading,
+    error: qrDetailError,
+  } = useQuery({
+    queryKey: ['vehicle-qr', qrSheetThirdPartyId],
+    queryFn: () => dashboardApi.getVehicleQrCode(qrSheetThirdPartyId!),
+    enabled: qrSheetOpen && qrSheetThirdPartyId != null,
+  });
+
   const vehiclesData = data;
+
+  const openQrSheet = (thirdPartyId: number) => {
+    setQrSheetThirdPartyId(thirdPartyId);
+    setQrSheetOpen(true);
+  };
+
+  const closeQrSheet = () => {
+    setQrSheetOpen(false);
+    setQrSheetThirdPartyId(null);
+  };
+
+  const downloadQrPdf = () => {
+    if (!qrDetail) return;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = 210; // A4 width in mm
+    const margin = 20;
+    let y = 20;
+
+    doc.setFontSize(18);
+    doc.text('Vehicle QR Code', margin, y);
+    y += 12;
+
+    const v = qrDetail.vehicle;
+    const plate = v?.plate ?? '—';
+    const qrSize = 50;
+    const qrX = (pageW - qrSize) / 2;
+
+    if (qrDetail.qrCodeDataUrl) {
+      doc.addImage(qrDetail.qrCodeDataUrl, 'PNG', qrX, y, qrSize, qrSize);
+      y += qrSize + 8;
+    }
+    doc.setFontSize(14);
+    doc.text(plate, pageW / 2, y, { align: 'center' });
+    y += 14;
+
+    doc.setFontSize(11);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Vehicle details', margin, y);
+    y += 8;
+    doc.setTextColor(0, 0, 0);
+
+    const details = [
+      ['Plate', plate],
+      ['Model', v?.model ?? '—'],
+      ['Brand', v?.brand ?? '—'],
+      ['Year', String(v?.year ?? '—')],
+      ['Tag', v?.tag2 ?? '—'],
+    ];
+    details.forEach(([label, value]) => {
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${label}:`, margin, y);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(value), margin + 35, y);
+      y += 7;
+    });
+
+    const filename = `qr-code-${plate.replace(/\s+/g, '-')}.pdf`;
+    doc.save(filename);
+  };
 
   const handleSort = (field: string) => {
     const [currentField, currentDirection] = sortBy.split(':');
@@ -71,26 +158,49 @@ export default function Vehicles() {
     );
   };
 
-  const renderQrCode = (qrCode: string | null) => {
-    if (!qrCode) {
-      return <span className="text-muted-foreground">Not Generated</span>;
+  /** Resolve QR code value: API may return null, a string, or an object { qrCode: string } */
+  const getQrCodeValue = (qrCode: string | null | { qrCode?: string } | undefined): string | null => {
+    if (qrCode == null) return null;
+    if (typeof qrCode === 'string') return qrCode;
+    if (typeof qrCode === 'object' && qrCode !== null && 'qrCode' in qrCode) {
+      return qrCode.qrCode ?? null;
     }
-    // If qrCode is a data URL (base64 image), display it
-    if (qrCode.startsWith('data:image')) {
-      return (
-        <div className="flex items-center gap-2">
-          <img src={qrCode} alt="QR Code" className="h-8 w-8" />
-          <QrCode className="h-4 w-4 text-muted-foreground" />
-        </div>
-      );
-    }
-    // If it's a string, display it
-    return (
+    return null;
+  };
+
+  const renderQrCode = (qrCodeValue: string | null, vehicle: any) => {
+    const thirdPartyId = vehicle?.thirdPartyId;
+    const hasQr = !!qrCodeValue && thirdPartyId != null;
+    const content = !qrCodeValue ? (
+      <span className="text-muted-foreground">Not Generated</span>
+    ) : qrCodeValue.startsWith('data:image') ? (
+      <div className="flex items-center gap-2">
+        <img src={qrCodeValue} alt="QR Code" className="h-8 w-8" />
+        <QrCode className="h-4 w-4 text-muted-foreground" />
+      </div>
+    ) : (
       <div className="flex items-center gap-2">
         <QrCode className="h-4 w-4 text-primary" />
-        <span className="text-xs font-mono max-w-[100px] truncate">{qrCode}</span>
+        <span className="text-xs font-mono max-w-[100px] truncate">{qrCodeValue}</span>
       </div>
     );
+    if (hasQr) {
+      return (
+        <button
+          type="button"
+          onClick={() => openQrSheet(thirdPartyId)}
+          className={cn(
+            'flex items-center gap-2 rounded-md px-2 py-1 -mx-2 -my-1',
+            'hover:bg-accent/80 transition-colors cursor-pointer text-left w-full',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+          )}
+          title="View QR code details"
+        >
+          {content}
+        </button>
+      );
+    }
+    return content;
   };
 
   return (
@@ -244,7 +354,7 @@ export default function Vehicles() {
                         <TableCell>{vehicle.brand ?? 'N/A'}</TableCell>
                         <TableCell>{vehicle.year ?? 'N/A'}</TableCell>
                         <TableCell>{vehicle.tag2 ?? 'N/A'}</TableCell>
-                        <TableCell>{renderQrCode(vehicle.qrCode)}</TableCell>
+                        <TableCell>{renderQrCode(getQrCodeValue(vehicle.qrCode), vehicle)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -307,6 +417,122 @@ export default function Vehicles() {
           )}
         </CardContent>
       </Card>
+
+      {/* QR Code detail sheet (slide-in from right) */}
+      {qrSheetOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity"
+            aria-hidden
+            onClick={closeQrSheet}
+          />
+          <div
+            className={cn(
+              'fixed top-0 right-0 z-50 h-full w-full max-w-md',
+              'bg-card border-l shadow-xl',
+              'flex flex-col',
+              'animate-sheet-in-right'
+            )}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="qr-sheet-title"
+          >
+            <div className="flex items-center justify-between border-b px-6 py-4">
+              <h2 id="qr-sheet-title" className="text-lg font-semibold flex items-center gap-2">
+                <ScanLine className="h-5 w-5 text-primary" />
+                QR Code Details
+              </h2>
+              <div className="flex items-center gap-1">
+                {qrDetail && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={downloadQrPdf}
+                    className="gap-2 shadow-sm"
+                    aria-label="Download PDF"
+                  >
+                    <FileDown className="h-4 w-4" />
+                    Download PDF
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" onClick={closeQrSheet} aria-label="Close">
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              {qrDetailLoading ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <Loader2 className="h-10 w-10 animate-spin text-muted-foreground mb-4" />
+                  <p className="text-sm text-muted-foreground">Loading QR code…</p>
+                </div>
+              ) : qrDetailError ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-2">Could not load QR code details.</p>
+                  <Button variant="outline" size="sm" onClick={closeQrSheet}>
+                    Close
+                  </Button>
+                </div>
+              ) : qrDetail ? (
+                <div className="space-y-6">
+                  <div className="rounded-xl border-2 border-border bg-muted/20 p-5 flex flex-col items-center gap-4 ring-1 ring-black/5">
+                    <div className="rounded-lg border-2 border-border bg-white p-4 shadow-sm">
+                      {qrDetail.qrCodeDataUrl ? (
+                        <img
+                          src={qrDetail.qrCodeDataUrl}
+                          alt="Vehicle QR Code"
+                          className="h-48 w-48 object-contain"
+                        />
+                      ) : (
+                        <div className="h-48 w-48 flex items-center justify-center bg-muted/50 rounded">
+                          <QrCode className="h-16 w-16 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm font-medium text-center">
+                      {qrDetail.vehicle?.plate ?? '—'}
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <Car className="h-4 w-4" />
+                      Vehicle details
+                    </h3>
+                    <dl className="grid gap-2 text-sm">
+                      <div className="flex justify-between gap-4 py-2 border-b">
+                        <dt className="text-muted-foreground flex items-center gap-2">
+                          <Hash className="h-3.5 w-3.5" />
+                          Plate
+                        </dt>
+                        <dd className="font-medium">{qrDetail.vehicle?.plate ?? '—'}</dd>
+                      </div>
+                      <div className="flex justify-between gap-4 py-2 border-b">
+                        <dt className="text-muted-foreground flex items-center gap-2">
+                          <Tag className="h-3.5 w-3.5" />
+                          Model
+                        </dt>
+                        <dd className="font-medium">{qrDetail.vehicle?.model ?? '—'}</dd>
+                      </div>
+                      <div className="flex justify-between gap-4 py-2 border-b">
+                        <dt className="text-muted-foreground flex items-center gap-2">Brand</dt>
+                        <dd className="font-medium">{qrDetail.vehicle?.brand ?? '—'}</dd>
+                      </div>
+                      <div className="flex justify-between gap-4 py-2 border-b">
+                        <dt className="text-muted-foreground flex items-center gap-2">Year</dt>
+                        <dd className="font-medium">{qrDetail.vehicle?.year ?? '—'}</dd>
+                      </div>
+                      <div className="flex justify-between gap-4 py-2">
+                        <dt className="text-muted-foreground flex items-center gap-2">Tag</dt>
+                        <dd className="font-medium">{qrDetail.vehicle?.tag2 ?? '—'}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
