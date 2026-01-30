@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { dashboardApi, PaginateQuery, PaginateResult } from '@/api/dashboard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -30,7 +30,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
-import { formatDate, formatNumber } from '@/lib/utils';
+import { formatNumber } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
 export default function Vehicles() {
@@ -66,7 +66,7 @@ export default function Vehicles() {
   const { data, isLoading, error } = useQuery<PaginateResult<any>>({
     queryKey: ['vehicles', query],
     queryFn: () => dashboardApi.getVehicles(query),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 
   const {
@@ -96,7 +96,7 @@ export default function Vehicles() {
     },
   });
 
-  const vehiclesData = data;
+  const vehiclesData = data as PaginateResult<any> | undefined;
 
   const openQrSheet = (thirdPartyId: number) => {
     setQrSheetThirdPartyId(thirdPartyId);
@@ -164,7 +164,7 @@ export default function Vehicles() {
   };
 
   const SortButton = ({ field, children }: { field: string; children: React.ReactNode }) => {
-    const [currentField, currentDirection] = sortBy.split(':');
+    const [currentField] = sortBy.split(':');
     const isActive = currentField === field;
     return (
       <Button

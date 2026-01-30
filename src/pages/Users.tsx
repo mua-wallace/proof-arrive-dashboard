@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { dashboardApi, PaginateQuery, PaginateResult } from '@/api/dashboard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -46,10 +46,10 @@ export default function Users() {
   const { data, isLoading, error } = useQuery<PaginateResult<any>>({
     queryKey: ['users', query],
     queryFn: () => dashboardApi.getUsers(query),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 
-  const usersData = data;
+  const usersData = data as PaginateResult<any> | undefined;
 
   const handleSort = (field: string) => {
     const [currentField, currentDirection] = sortBy.split(':');
@@ -58,7 +58,7 @@ export default function Users() {
   };
 
   const SortButton = ({ field, children }: { field: string; children: React.ReactNode }) => {
-    const [currentField, currentDirection] = sortBy.split(':');
+    const [currentField] = sortBy.split(':');
     const isActive = currentField === field;
     return (
       <Button

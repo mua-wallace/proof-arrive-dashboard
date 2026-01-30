@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Clock, TrendingUp } from 'lucide-react';
+import { ArrowRightLeft, Clock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function Arrivals() {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { dashboardApi, PaginateQuery, PaginateResult } from '@/api/dashboard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Building2, Search, ChevronLeft, ChevronRight, ArrowUpDown, Loader2 } from 'lucide-react';
-import { formatDate, formatNumber } from '@/lib/utils';
+import { formatNumber } from '@/lib/utils';
 
 export default function Centers() {
   const [page, setPage] = useState(1);
@@ -44,10 +44,10 @@ export default function Centers() {
   const { data, isLoading, error } = useQuery<PaginateResult<any>>({
     queryKey: ['centers', query],
     queryFn: () => dashboardApi.getCenters(query),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 
-  const centersData = data;
+  const centersData = data as PaginateResult<any> | undefined;
 
   const handleSort = (field: string) => {
     const [currentField, currentDirection] = sortBy.split(':');
@@ -56,7 +56,7 @@ export default function Centers() {
   };
 
   const SortButton = ({ field, children }: { field: string; children: React.ReactNode }) => {
-    const [currentField, currentDirection] = sortBy.split(':');
+    const [currentField] = sortBy.split(':');
     const isActive = currentField === field;
     return (
       <Button
