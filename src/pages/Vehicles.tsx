@@ -14,15 +14,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Building2, Search, ChevronLeft, ChevronRight, ArrowUpDown, Loader2 } from 'lucide-react';
+import { Car, Search, ChevronLeft, ChevronRight, ArrowUpDown, Loader2, QrCode } from 'lucide-react';
 import { formatDate, formatNumber } from '@/lib/utils';
 
-export default function Centers() {
+export default function Vehicles() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState('');
-  const [searchBy, setSearchBy] = useState('name');
-  const [sortBy, setSortBy] = useState('name:ASC');
+  const [searchBy, setSearchBy] = useState('plate,model,brand');
+  const [sortBy, setSortBy] = useState('createdAt:DESC');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
   useEffect(() => {
@@ -42,12 +42,12 @@ export default function Centers() {
   };
 
   const { data, isLoading, error } = useQuery<PaginateResult<any>>({
-    queryKey: ['centers', query],
-    queryFn: () => dashboardApi.getCenters(query),
+    queryKey: ['vehicles', query],
+    queryFn: () => dashboardApi.getVehicles(query),
     keepPreviousData: true,
   });
 
-  const centersData = data;
+  const vehiclesData = data;
 
   const handleSort = (field: string) => {
     const [currentField, currentDirection] = sortBy.split(':');
@@ -71,22 +71,44 @@ export default function Centers() {
     );
   };
 
+  const renderQrCode = (qrCode: string | null) => {
+    if (!qrCode) {
+      return <span className="text-muted-foreground">Not Generated</span>;
+    }
+    // If qrCode is a data URL (base64 image), display it
+    if (qrCode.startsWith('data:image')) {
+      return (
+        <div className="flex items-center gap-2">
+          <img src={qrCode} alt="QR Code" className="h-8 w-8" />
+          <QrCode className="h-4 w-4 text-muted-foreground" />
+        </div>
+      );
+    }
+    // If it's a string, display it
+    return (
+      <div className="flex items-center gap-2">
+        <QrCode className="h-4 w-4 text-primary" />
+        <span className="text-xs font-mono max-w-[100px] truncate">{qrCode}</span>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <Building2 className="h-8 w-8" />
-          Centers
+          <Car className="h-8 w-8" />
+          Vehicles
         </h1>
         <p className="text-muted-foreground">
-          View and manage centers (sites) in the system
+          View and manage vehicles in the system
         </p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Search & Filter</CardTitle>
-          <CardDescription>Find centers by name, geozone, manager, or group</CardDescription>
+          <CardDescription>Find vehicles by plate, model, brand, or other fields</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
@@ -96,7 +118,7 @@ export default function Centers() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="search"
-                  placeholder="Search centers..."
+                  placeholder="Search vehicles..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-9"
@@ -110,11 +132,11 @@ export default function Centers() {
                 value={searchBy}
                 onChange={(e) => setSearchBy(e.target.value)}
               >
-                <option value="name">Name</option>
-                <option value="geozone">Geozone</option>
-                <option value="manager">Manager</option>
-                <option value="groupname">Group</option>
-                <option value="name,geozone,manager">Name, Geozone & Manager</option>
+                <option value="plate,model,brand">Plate, Model & Brand</option>
+                <option value="plate">Plate Only</option>
+                <option value="model">Model Only</option>
+                <option value="brand">Brand Only</option>
+                <option value="tag2">Tag</option>
               </Select>
             </div>
             <div className="space-y-2">
@@ -124,11 +146,14 @@ export default function Centers() {
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
               >
-                <option value="name:ASC">Name A-Z</option>
-                <option value="name:DESC">Name Z-A</option>
-                <option value="geozone:ASC">Geozone A-Z</option>
-                <option value="manager:ASC">Manager A-Z</option>
-                <option value="groupname:ASC">Group A-Z</option>
+                <option value="createdAt:DESC">Newest First</option>
+                <option value="createdAt:ASC">Oldest First</option>
+                <option value="plate:ASC">Plate A-Z</option>
+                <option value="plate:DESC">Plate Z-A</option>
+                <option value="model:ASC">Model A-Z</option>
+                <option value="brand:ASC">Brand A-Z</option>
+                <option value="year:DESC">Year (Newest)</option>
+                <option value="year:ASC">Year (Oldest)</option>
               </Select>
             </div>
             <div className="space-y-2">
@@ -155,11 +180,11 @@ export default function Centers() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Centers List</CardTitle>
+              <CardTitle>Vehicles List</CardTitle>
               <CardDescription>
-                {centersData && centersData.meta && centersData.meta.totalItems > 0
-                  ? `Showing ${(page - 1) * limit + 1} to ${Math.min(page * limit, centersData.meta.totalItems)} of ${formatNumber(centersData.meta.totalItems)} centers`
-                  : 'No centers found'}
+                {vehiclesData && vehiclesData.meta && vehiclesData.meta.totalItems > 0
+                  ? `Showing ${(page - 1) * limit + 1} to ${Math.min(page * limit, vehiclesData.meta.totalItems)} of ${formatNumber(vehiclesData.meta.totalItems)} vehicles`
+                  : 'No vehicles found'}
               </CardDescription>
             </div>
           </div>
@@ -171,10 +196,10 @@ export default function Centers() {
             </div>
           ) : error ? (
             <div className="text-center py-12">
-              <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-2">Failed to load centers</p>
+              <Car className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-2">Failed to load vehicles</p>
               <p className="text-sm text-muted-foreground">
-                {error instanceof Error ? error.message : 'An error occurred while fetching centers'}
+                {error instanceof Error ? error.message : 'An error occurred while fetching vehicles'}
               </p>
               <Button
                 variant="outline"
@@ -184,10 +209,10 @@ export default function Centers() {
                 Retry
               </Button>
             </div>
-          ) : !centersData || !centersData.data || centersData.data.length === 0 ? (
+          ) : !vehiclesData || !vehiclesData.data || vehiclesData.data.length === 0 ? (
             <div className="text-center py-12">
-              <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No centers found</p>
+              <Car className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No vehicles found</p>
             </div>
           ) : (
             <>
@@ -196,38 +221,40 @@ export default function Centers() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>
-                        <SortButton field="name">Name</SortButton>
+                        <SortButton field="plate">Plate</SortButton>
                       </TableHead>
-                      <TableHead>Geozone</TableHead>
-                      <TableHead>Manager</TableHead>
-                      <TableHead>Group</TableHead>
-                      <TableHead>Time 1</TableHead>
-                      <TableHead>Time 2</TableHead>
-                      <TableHead>Break Start</TableHead>
-                      <TableHead>Break Stop</TableHead>
+                      <TableHead>
+                        <SortButton field="model">Model</SortButton>
+                      </TableHead>
+                      <TableHead>
+                        <SortButton field="brand">Brand</SortButton>
+                      </TableHead>
+                      <TableHead>
+                        <SortButton field="year">Year</SortButton>
+                      </TableHead>
+                      <TableHead>Tag</TableHead>
+                      <TableHead>QR-Code</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {centersData.data.map((center: any) => (
-                      <TableRow key={center.id}>
-                        <TableCell className="font-medium">{center.name ?? 'N/A'}</TableCell>
-                        <TableCell>{center.geozone ?? 'N/A'}</TableCell>
-                        <TableCell>{center.manager ?? 'N/A'}</TableCell>
-                        <TableCell>{center.groupname ?? 'N/A'}</TableCell>
-                        <TableCell>{center.time1 ?? 'N/A'}</TableCell>
-                        <TableCell>{center.time2 ?? 'N/A'}</TableCell>
-                        <TableCell>{center.breakstart ?? 'N/A'}</TableCell>
-                        <TableCell>{center.breakstop ?? 'N/A'}</TableCell>
+                    {vehiclesData.data.map((vehicle: any) => (
+                      <TableRow key={vehicle.id}>
+                        <TableCell className="font-medium">{vehicle.plate ?? 'N/A'}</TableCell>
+                        <TableCell>{vehicle.model ?? 'N/A'}</TableCell>
+                        <TableCell>{vehicle.brand ?? 'N/A'}</TableCell>
+                        <TableCell>{vehicle.year ?? 'N/A'}</TableCell>
+                        <TableCell>{vehicle.tag2 ?? 'N/A'}</TableCell>
+                        <TableCell>{renderQrCode(vehicle.qrCode)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </div>
 
-              {centersData.meta && centersData.meta.totalPages > 1 && (
+              {vehiclesData.meta && vehiclesData.meta.totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4">
                   <div className="text-sm text-muted-foreground">
-                    Page {centersData.meta.currentPage} of {centersData.meta.totalPages}
+                    Page {vehiclesData.meta.currentPage} of {vehiclesData.meta.totalPages}
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -240,14 +267,14 @@ export default function Centers() {
                       Previous
                     </Button>
                     <div className="flex items-center gap-1">
-                      {Array.from({ length: Math.min(5, centersData.meta.totalPages) }, (_, i) => {
+                      {Array.from({ length: Math.min(5, vehiclesData.meta.totalPages) }, (_, i) => {
                         let pageNum;
-                        if (centersData.meta.totalPages <= 5) {
+                        if (vehiclesData.meta.totalPages <= 5) {
                           pageNum = i + 1;
                         } else if (page <= 3) {
                           pageNum = i + 1;
-                        } else if (page >= centersData.meta.totalPages - 2) {
-                          pageNum = centersData.meta.totalPages - 4 + i;
+                        } else if (page >= vehiclesData.meta.totalPages - 2) {
+                          pageNum = vehiclesData.meta.totalPages - 4 + i;
                         } else {
                           pageNum = page - 2 + i;
                         }
@@ -267,8 +294,8 @@ export default function Centers() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setPage((p) => Math.min(centersData.meta.totalPages, p + 1))}
-                      disabled={page === centersData.meta.totalPages}
+                      onClick={() => setPage((p) => Math.min(vehiclesData.meta.totalPages, p + 1))}
+                      disabled={page === vehiclesData.meta.totalPages}
                     >
                       Next
                       <ChevronRight className="h-4 w-4" />

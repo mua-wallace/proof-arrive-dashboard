@@ -85,7 +85,7 @@ export const dashboardApi = {
   },
 
   getVehicles: async (query?: PaginateQuery): Promise<PaginateResult<any>> => {
-    const response = await apiClient.get<PaginateResult<any>>('/dashboard/vehicles', {
+    const response = await apiClient.get<PaginateResult<any>>('/vehicles', {
       params: query,
     });
     return response.data;
