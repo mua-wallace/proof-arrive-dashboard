@@ -64,6 +64,22 @@ export interface QrCodeResponse {
   vehicle: any;
 }
 
+export interface CurrentUser {
+  id: string;
+  accountId: number;
+  createdAt: string;
+  updatedAt: string;
+  accid: string;
+  subid: string;
+  company?: string;
+  username?: string;
+  email?: string | null;
+  role?: string;
+  fullname?: string;
+  lastLoginAt?: string | null;
+  [key: string]: unknown;
+}
+
 export const dashboardApi = {
   getOverview: async (): Promise<DashboardOverview> => {
     const response = await apiClient.get<DashboardOverview>('/dashboard/overview');
@@ -74,6 +90,11 @@ export const dashboardApi = {
     const response = await apiClient.get<PaginateResult<any>>('/users', {
       params: query,
     });
+    return response.data;
+  },
+
+  getCurrentUser: async (): Promise<CurrentUser> => {
+    const response = await apiClient.get<CurrentUser>('/users/me');
     return response.data;
   },
 

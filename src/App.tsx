@@ -12,6 +12,7 @@ import Arrivals from './pages/Arrivals';
 import Exits from './pages/Exits';
 import IncomingVehicles from './pages/IncomingVehicles';
 import ProcessingStages from './pages/ProcessingStages';
+import Settings from './pages/Settings';
 import Layout from './components/layout/Layout';
 
 // Create a client
@@ -54,6 +55,7 @@ function App() {
             <Route path="exits" element={<Exits />} />
             <Route path="incoming-vehicles" element={<IncomingVehicles />} />
             <Route path="processing-stages" element={<ProcessingStages />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
       </BrowserRouter>

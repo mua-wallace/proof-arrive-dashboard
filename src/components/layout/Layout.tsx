@@ -11,9 +11,9 @@ import {
   LogOut,
   Package,
   Truck,
-  Menu,
   ChevronLeft,
   ChevronRight,
+  Settings,
 } from 'lucide-react';
 
 const navigation = [
@@ -98,6 +98,23 @@ export default function Layout() {
                 );
               })}
             </nav>
+            {/* Settings link at bottom */}
+            <div className={isSidebarCollapsed ? 'p-2' : 'px-4 pb-2'}>
+              <Link
+                to="/app/settings"
+                className={`flex items-center rounded-lg text-sm font-medium transition-colors ${
+                  isSidebarCollapsed ? 'justify-center px-0 py-2' : 'gap-3 px-3 py-2'
+                } ${
+                  location.pathname === '/app/settings'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                }`}
+                title={isSidebarCollapsed ? 'Settings' : undefined}
+              >
+                <Settings className="h-5 w-5 flex-shrink-0" />
+                {!isSidebarCollapsed && <span>Settings</span>}
+              </Link>
+            </div>
             {!isSidebarCollapsed && (
               <div className="border-t p-4">
                 <div className="mb-2 px-3 text-xs text-muted-foreground">
@@ -117,7 +134,16 @@ export default function Layout() {
               </div>
             )}
             {isSidebarCollapsed && (
-              <div className="border-t p-2">
+              <div className="border-t p-2 space-y-1">
+                <Link
+                  to="/app/settings"
+                  className={`flex justify-center rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground ${
+                    location.pathname === '/app/settings' ? 'bg-primary text-primary-foreground' : ''
+                  }`}
+                  title="Settings"
+                >
+                  <Settings className="h-5 w-5" />
+                </Link>
                 <Button
                   variant="outline"
                   size="icon"
