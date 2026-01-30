@@ -133,4 +133,12 @@ export const dashboardApi = {
     );
     return response.data;
   },
+
+  /** Generate QR code for a vehicle by thirdPartyId (POST) */
+  generateVehicleQrCode: async (thirdPartyId: number): Promise<QrCodeResponse> => {
+    const response = await apiClient.post<QrCodeResponse>(
+      `/vehicles/${thirdPartyId}/qr-code`
+    );
+    return response.data;
+  },
 };

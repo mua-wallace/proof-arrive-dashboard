@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { dashboardApi, PaginateQuery, PaginateResult } from '@/api/dashboard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,7 @@ import {
   Hash,
   Tag,
   FileDown,
+  Plus,
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { formatDate, formatNumber } from '@/lib/utils';
@@ -41,6 +42,9 @@ export default function Vehicles() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [qrSheetOpen, setQrSheetOpen] = useState(false);
   const [qrSheetThirdPartyId, setQrSheetThirdPartyId] = useState<number | null>(null);
+  const [generateModalOpen, setGenerateModalOpen] = useState(false);
+  const [selectedThirdPartyIdForGenerate, setSelectedThirdPartyIdForGenerate] = useState<string>('');
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -73,6 +77,23 @@ export default function Vehicles() {
     queryKey: ['vehicle-qr', qrSheetThirdPartyId],
     queryFn: () => dashboardApi.getVehicleQrCode(qrSheetThirdPartyId!),
     enabled: qrSheetOpen && qrSheetThirdPartyId != null,
+  });
+
+  const { data: vehiclesForDropdown } = useQuery<PaginateResult<any>>({
+    queryKey: ['vehicles', 'dropdown', { page: 1, limit: 200, include: 'qrCodes' }],
+    queryFn: () =>
+      dashboardApi.getVehicles({ page: 1, limit: 200, include: 'qrCodes' }),
+    enabled: generateModalOpen,
+  });
+
+  const generateQrMutation = useMutation({
+    mutationFn: (thirdPartyId: number) => dashboardApi.generateVehicleQrCode(thirdPartyId),
+    onSuccess: (_, thirdPartyId) => {
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      setGenerateModalOpen(false);
+      setSelectedThirdPartyIdForGenerate('');
+      openQrSheet(thirdPartyId);
+    },
   });
 
   const vehiclesData = data;
@@ -203,16 +224,33 @@ export default function Vehicles() {
     return content;
   };
 
+  const handleGenerateQrSubmit = () => {
+    const id = selectedThirdPartyIdForGenerate ? Number(selectedThirdPartyIdForGenerate) : null;
+    if (id == null || Number.isNaN(id)) return;
+    generateQrMutation.mutate(id);
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <Car className="h-8 w-8" />
-          Vehicles
-        </h1>
-        <p className="text-muted-foreground">
-          View and manage vehicles in the system
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <Car className="h-8 w-8" />
+            Vehicles
+          </h1>
+          <p className="text-muted-foreground">
+            View and manage vehicles in the system
+          </p>
+        </div>
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => setGenerateModalOpen(true)}
+          className="gap-2 shadow-sm shrink-0"
+        >
+          <Plus className="h-4 w-4" />
+          Generate QR Code
+        </Button>
       </div>
 
       <Card>
@@ -417,6 +455,86 @@ export default function Vehicles() {
           )}
         </CardContent>
       </Card>
+
+      {/* Generate QR Code modal */}
+      {generateModalOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+            aria-hidden
+            onClick={() => !generateQrMutation.isPending && setGenerateModalOpen(false)}
+          />
+          <div
+            className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-card p-6 shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="generate-qr-title"
+          >
+            <h2 id="generate-qr-title" className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <QrCode className="h-5 w-5 text-primary" />
+              Generate QR Code
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Select a vehicle without a QR code to generate one.
+            </p>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="generate-vehicle-select">Vehicle</Label>
+                <Select
+                  id="generate-vehicle-select"
+                  value={selectedThirdPartyIdForGenerate}
+                  onChange={(e) => setSelectedThirdPartyIdForGenerate(e.target.value)}
+                  disabled={generateQrMutation.isPending}
+                >
+                  <option value="">Select a vehicle…</option>
+                  {(vehiclesForDropdown?.data ?? [])
+                    .filter((v: any) => !getQrCodeValue(v.qrCode))
+                    .map((v: any) => (
+                      <option key={v.id} value={v.thirdPartyId ?? v.id}>
+                        {v.plate ?? 'N/A'}
+                        {v.model ? ` — ${v.model}` : ''}
+                        {v.brand ? ` (${v.brand})` : ''}
+                      </option>
+                    ))}
+                </Select>
+                {(vehiclesForDropdown?.data ?? []).filter((v: any) => !getQrCodeValue(v.qrCode)).length === 0 &&
+                  vehiclesForDropdown?.data != null && (
+                    <p className="text-xs text-muted-foreground">
+                      All vehicles already have a QR code.
+                    </p>
+                  )}
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setGenerateModalOpen(false)}
+                  disabled={generateQrMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={handleGenerateQrSubmit}
+                  disabled={!selectedThirdPartyIdForGenerate || generateQrMutation.isPending}
+                  className="gap-2"
+                >
+                  {generateQrMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Generating…
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" />
+                      Generate
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* QR Code detail sheet (slide-in from right) */}
       {qrSheetOpen && (
