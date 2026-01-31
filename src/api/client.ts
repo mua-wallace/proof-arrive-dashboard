@@ -1,6 +1,15 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
+// Use HTTPS when the app is served over HTTPS to avoid Mixed Content blocking
+function getApiBaseUrl(): string {
+  let url = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
+  if (typeof window !== 'undefined' && window.location?.protocol === 'https:' && url.startsWith('http://')) {
+    url = url.replace(/^http:\/\//, 'https://');
+  }
+  return url;
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Create axios instance
 export const apiClient: AxiosInstance = axios.create({
