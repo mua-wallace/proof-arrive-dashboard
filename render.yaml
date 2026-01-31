@@ -1,0 +1,8 @@
+# Render Blueprint: Proof Arrive Dashboard (Vite SPA)
+# Build produces static files in dist/; start serves them with vite preview.
+services:
+  - type: web
+    name: proof-arrive-dashboard
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
