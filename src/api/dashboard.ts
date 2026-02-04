@@ -93,7 +93,9 @@ export interface Vehicle {
   lastSyncedAt: string;
   createdAt: string;
   updatedAt: string;
-  qrCode?: string | null | { qrCode?: string };
+  qrCode?: string | null | { qrCode?: string; qrCodeDataUrl?: string };
+  qrCodeDataUrl?: string;
+  qrCodeString?: string;
 }
 
 export interface VehicleGroup {
@@ -198,9 +200,11 @@ export const dashboardApi = {
   },
 
   /** Get vehicles grouped by groups */
-  getVehicleGroups: async (database?: string): Promise<VehicleGroup[]> => {
+  getVehicleGroups: async (database?: string, include?: string): Promise<VehicleGroup[]> => {
     const endpoint = database ? `/vehicles/groups/${database}` : '/vehicles/groups';
-    const response = await apiClient.get<VehicleGroup[]>(endpoint);
+    const response = await apiClient.get<VehicleGroup[]>(endpoint, {
+      params: include ? { include } : undefined,
+    });
     return response.data;
   },
 

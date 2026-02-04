@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import {
   Accordion,
   AccordionItem,
@@ -24,10 +25,13 @@ import {
   FileDown,
   CheckSquare,
   Square,
+  Eye,
+  Download,
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
-import { formatNumber } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { toast } from '@/lib/toast';
+import { QrCodeResponse } from '@/api/dashboard';
 
 export default function Vehicles() {
   const [search, setSearch] = useState('');
@@ -36,6 +40,9 @@ export default function Vehicles() {
   const [qrSheetThirdPartyId, setQrSheetThirdPartyId] = useState<number | null>(null);
   const [selectedVehicles, setSelectedVehicles] = useState<Set<number>>(new Set());
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewVehicleIds, setPreviewVehicleIds] = useState<number[]>([]);
+  const [downloadPerPage, setDownloadPerPage] = useState<1 | 2 | 3 | 4>(4);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -46,26 +53,71 @@ export default function Vehicles() {
   }, [search]);
 
   const { data: vehicleGroups, isLoading, error } = useQuery<VehicleGroup[]>({
-    queryKey: ['vehicle-groups', 'database'],
-    queryFn: () => dashboardApi.getVehicleGroups('database'),
+    queryKey: ['vehicle-groups', 'database', 'qrCodes'],
+    queryFn: () => dashboardApi.getVehicleGroups('database', 'qrCodes'),
   });
+
+  // Handle vehicle groups error
+  useEffect(() => {
+    if (error) {
+      const message = (error as any)?.response?.data?.message || (error as Error)?.message || 'Failed to load vehicle groups';
+      toast.error('Error Loading Vehicles', message);
+    }
+  }, [error]);
 
   const {
     data: qrDetail,
     isLoading: qrDetailLoading,
     error: qrDetailError,
-  } = useQuery({
+  } = useQuery<QrCodeResponse>({
     queryKey: ['vehicle-qr', qrSheetThirdPartyId],
     queryFn: () => dashboardApi.getVehicleQrCode(qrSheetThirdPartyId!),
     enabled: qrSheetOpen && qrSheetThirdPartyId != null,
   });
 
+  // Handle QR detail error
+  useEffect(() => {
+    if (qrDetailError) {
+      const message = (qrDetailError as any)?.response?.data?.message || (qrDetailError as Error)?.message || 'Failed to load QR code details';
+      toast.error('Error Loading QR Code', message);
+    }
+  }, [qrDetailError]);
+
   const bulkCreateQrMutation = useMutation({
-    mutationFn: (vehicleIds: number[]) => dashboardApi.bulkCreateQrCodes(vehicleIds),
-    onSuccess: () => {
+    mutationFn: (vehicleIds: number[]) => {
+      // Ensure vehicleIds is an array of numbers (thirdPartyIds)
+      return dashboardApi.bulkCreateQrCodes(vehicleIds);
+    },
+    onSuccess: (data, vehicleIds) => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-groups'] });
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       setSelectedVehicles(new Set());
+      
+      // Handle response - API may return different formats
+      const successCount = data?.created ?? vehicleIds.length;
+      const failedCount = data?.failed ?? 0;
+      
+      if (failedCount > 0) {
+        const errorDetails = data?.errors 
+          ? ` Errors: ${data.errors.map(e => `Vehicle ${e.vehicleId}: ${e.error}`).join('; ')}`
+          : '';
+        toast.error(
+          'Partial Success',
+          `QR codes created for ${successCount} vehicle${successCount !== 1 ? 's' : ''}. ${failedCount} failed.${errorDetails}`
+        );
+      } else {
+        toast.success(
+          'Success',
+          `QR codes created successfully for ${successCount} vehicle${successCount !== 1 ? 's' : ''}.`
+        );
+      }
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message 
+        || error?.response?.data?.error 
+        || error?.message 
+        || 'Failed to create QR codes';
+      toast.error('Error Creating QR Codes', errorMessage);
     },
   });
 
@@ -76,9 +128,9 @@ export default function Vehicles() {
 
     const searchLower = debouncedSearch.toLowerCase();
     return vehicleGroups
-      .map((group) => {
+      .map((group: VehicleGroup) => {
         const filteredVehicles = group.vehicles.filter(
-          (vehicle) =>
+          (vehicle: Vehicle) =>
             vehicle.plate?.toLowerCase().includes(searchLower) ||
             vehicle.model?.toLowerCase().includes(searchLower)
         );
@@ -88,7 +140,7 @@ export default function Vehicles() {
           total: filteredVehicles.length,
         };
       })
-      .filter((group) => group.vehicles.length > 0);
+      .filter((group: VehicleGroup) => group.vehicles.length > 0);
   }, [vehicleGroups, debouncedSearch]);
 
   const openQrSheet = (thirdPartyId: number) => {
@@ -160,6 +212,29 @@ export default function Vehicles() {
     return null;
   };
 
+  /** Get QR code data URL if available */
+  const getQrCodeDataUrl = (vehicle: Vehicle): string | null => {
+    // First check if vehicle has qrCodeDataUrl directly (from API with include=qrCodes)
+    if (vehicle.qrCodeDataUrl) {
+      return vehicle.qrCodeDataUrl;
+    }
+    
+    const qrValue = getQrCodeValue(vehicle.qrCode);
+    if (!qrValue) return null;
+    
+    // Check if it's a data URL (image)
+    if (qrValue.startsWith('data:image')) {
+      return qrValue;
+    }
+    
+    // Check if qrCode object has qrCodeDataUrl
+    if (vehicle.qrCode && typeof vehicle.qrCode === 'object' && 'qrCodeDataUrl' in vehicle.qrCode) {
+      return (vehicle.qrCode as any).qrCodeDataUrl || null;
+    }
+    
+    return null;
+  };
+
   // Handle vehicle selection
   const toggleVehicleSelection = (vehicleId: number) => {
     setSelectedVehicles((prev) => {
@@ -214,11 +289,194 @@ export default function Vehicles() {
   // Get vehicles without QR codes that are selected
   const selectedVehiclesWithoutQr = useMemo(() => {
     if (!vehicleGroups) return [];
-    const allVehicles = vehicleGroups.flatMap((g) => g.vehicles);
-    return allVehicles.filter(
-      (v) => selectedVehicles.has(v.thirdPartyId) && !getQrCodeValue(v.qrCode)
-    );
+    const allVehicles = vehicleGroups.flatMap((g: VehicleGroup) => g.vehicles);
+    return allVehicles.filter((v: Vehicle) => {
+      if (!selectedVehicles.has(v.thirdPartyId)) return false;
+      // Check if vehicle doesn't have QR code (no qrCodeDataUrl, qrCodeString, or qrCode value)
+      return !(v.qrCodeDataUrl || v.qrCodeString || getQrCodeValue(v.qrCode));
+    });
   }, [vehicleGroups, selectedVehicles]);
+
+  // Get vehicles with QR codes that are selected
+  const selectedVehiclesWithQr = useMemo(() => {
+    if (!vehicleGroups) return [];
+    const allVehicles = vehicleGroups.flatMap((g: VehicleGroup) => g.vehicles);
+    return allVehicles.filter((v: Vehicle) => {
+      if (!selectedVehicles.has(v.thirdPartyId)) return false;
+      // Check if vehicle has QR code (either qrCodeDataUrl, qrCodeString, or qrCode value)
+      return !!(v.qrCodeDataUrl || v.qrCodeString || getQrCodeValue(v.qrCode));
+    });
+  }, [vehicleGroups, selectedVehicles]);
+
+  // Handle bulk download QR codes as PDF (A4). QR size proportionate to available layout; 1 per page = 9/10 of A4, centered.
+  const handleBulkDownloadQr = async () => {
+    if (selectedVehiclesWithQr.length === 0) return;
+
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = 210;  // A4
+    const pageH = 297;  // A4
+    const margin = 12;
+    const perPage = downloadPerPage;
+    const cols = perPage === 1 ? 1 : perPage === 4 ? 2 : 1;
+    const rows = perPage === 1 ? 1 : perPage === 2 ? 2 : perPage === 3 ? 3 : 2;
+    // Content area = 9/10 of page height, full width minus margins
+    const contentW = pageW - 2 * margin;
+    const contentH = pageH * 0.9;
+    const cellW = contentW / cols;
+    const cellH = contentH / rows;
+
+    // QR size proportionate to layout: 1 per page = 9/10 of A4 (min dimension), else 9/10 of cell
+    const qrSize =
+      perPage === 1
+        ? Math.min(pageW, pageH) * 0.9   // 9/10 of A4
+        : Math.min(cellW, cellH - 10) * 0.9;  // 9/10 of cell, leave room for plate
+
+    const plateGap = 8;
+    const plateFontSize = perPage === 1 ? 14 : perPage === 2 ? 10 : perPage === 3 ? 9 : 8;
+
+    let itemIndex = 0;
+
+    for (const vehicle of selectedVehiclesWithQr) {
+      const pageItem = itemIndex % perPage;
+      if (pageItem === 0 && itemIndex > 0) {
+        doc.addPage();
+      }
+
+      const col = pageItem % cols;
+      const row = Math.floor(pageItem / cols);
+      const cellX = margin + col * cellW;
+      const cellY = margin + row * cellH;
+
+      let qrX: number;
+      let qrY: number;
+      let plateX: number;
+      let plateY: number;
+
+      if (perPage === 1) {
+        // Center QR + plate block on entire page
+        const blockH = qrSize + plateGap + 10;
+        const startY = (pageH - blockH) / 2;
+        qrX = (pageW - qrSize) / 2;
+        qrY = startY;
+        plateX = pageW / 2;
+        plateY = startY + qrSize + plateGap;
+      } else {
+        // Center within cell
+        qrX = cellX + (cellW - qrSize) / 2;
+        qrY = cellY + 4;
+        plateX = cellX + cellW / 2;
+        plateY = qrY + qrSize + 6;
+      }
+
+      let qrDataUrl = getQrCodeDataUrl(vehicle);
+      if (!qrDataUrl) {
+        try {
+          const qrDetail = await dashboardApi.getVehicleQrCode(vehicle.thirdPartyId);
+          if (qrDetail?.qrCodeDataUrl) {
+            qrDataUrl = qrDetail.qrCodeDataUrl;
+          }
+        } catch (error) {
+          console.error(`Failed to fetch QR code for vehicle ${vehicle.thirdPartyId}:`, error);
+          itemIndex++;
+          continue;
+        }
+      }
+      if (qrDataUrl) {
+        doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+      }
+
+      doc.setFontSize(plateFontSize);
+      doc.setTextColor(0, 0, 0);
+      const plate = vehicle.plate ?? 'N/A';
+      const maxPlateW = perPage === 1 ? pageW - 2 * margin : cellW - 4;
+      doc.text(plate, plateX, plateY, { align: 'center', maxWidth: maxPlateW });
+
+      itemIndex++;
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filename = `qr-codes-bulk-${timestamp}.pdf`;
+    doc.save(filename);
+  };
+
+  // Fetch QR codes for preview
+  const previewQrQueries = useQuery({
+    queryKey: ['preview-qr-codes', previewVehicleIds],
+    queryFn: async () => {
+      const results = await Promise.allSettled(
+        previewVehicleIds.map((id) => dashboardApi.getVehicleQrCode(id))
+      );
+      return results.map((result, index) => ({
+        vehicleId: previewVehicleIds[index],
+        qrCode: result.status === 'fulfilled' ? result.value : null,
+        error: result.status === 'rejected' ? result.reason : null,
+      }));
+    },
+    enabled: previewModalOpen && previewVehicleIds.length > 0,
+  });
+
+  // Get vehicle info for preview
+  const previewVehicles = useMemo(() => {
+    if (!vehicleGroups || !previewVehicleIds.length) return [];
+    const allVehicles = vehicleGroups.flatMap((g: VehicleGroup) => g.vehicles);
+    return previewVehicleIds
+      .map((id) => allVehicles.find((v: Vehicle) => v.thirdPartyId === id))
+      .filter((v): v is Vehicle => v !== undefined);
+  }, [vehicleGroups, previewVehicleIds]);
+
+  const closePreviewModal = () => {
+    setPreviewModalOpen(false);
+    setPreviewVehicleIds([]);
+  };
+
+  const downloadPreviewQrPdf = (qrData: QrCodeResponse) => {
+    if (!qrData) return;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = 210;
+    const margin = 20;
+    let y = 20;
+
+    doc.setFontSize(18);
+    doc.text('Vehicle QR Code', margin, y);
+    y += 12;
+
+    const v = qrData.vehicle;
+    const plate = v?.plate ?? '—';
+    const qrSize = 50;
+    const qrX = (pageW - qrSize) / 2;
+
+    if (qrData.qrCodeDataUrl) {
+      doc.addImage(qrData.qrCodeDataUrl, 'PNG', qrX, y, qrSize, qrSize);
+      y += qrSize + 8;
+    }
+    doc.setFontSize(14);
+    doc.text(plate, pageW / 2, y, { align: 'center' });
+    y += 14;
+
+    doc.setFontSize(11);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Vehicle details', margin, y);
+    y += 8;
+    doc.setTextColor(0, 0, 0);
+
+    const details = [
+      ['Plate', plate],
+      ['Model', v?.model ?? '—'],
+      ['Brand', v?.brand ?? '—'],
+      ['Year', String(v?.year ?? '—')],
+      ['Tag', v?.tag2 ?? '—'],
+    ];
+    details.forEach(([label, value]) => {
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${label}:`, margin, y);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(value), margin + 35, y);
+      y += 7;
+    });
+
+    const filename = `qr-code-${plate.replace(/\s+/g, '-')}.pdf`;
+    doc.save(filename);
+  };
 
   return (
     <div className="space-y-6">
@@ -233,25 +491,56 @@ export default function Vehicles() {
           </p>
         </div>
         {totalSelected > 0 && (
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleBulkGenerateQr}
-            disabled={bulkCreateQrMutation.isPending || selectedVehiclesWithoutQr.length === 0}
-            className="gap-2 shadow-sm shrink-0"
-          >
-            {bulkCreateQrMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <QrCode className="h-4 w-4" />
-                Generate QR Codes ({selectedVehiclesWithoutQr.length})
-              </>
+          <>
+            {selectedVehiclesWithoutQr.length > 0 && selectedVehiclesWithQr.length === 0 && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleBulkGenerateQr}
+                disabled={bulkCreateQrMutation.isPending}
+                className="gap-2 shadow-sm shrink-0"
+              >
+                {bulkCreateQrMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <QrCode className="h-4 w-4" />
+                    Generate QR Codes ({selectedVehiclesWithoutQr.length})
+                  </>
+                )}
+              </Button>
             )}
-          </Button>
+            {selectedVehiclesWithQr.length > 0 && selectedVehiclesWithoutQr.length === 0 && (
+              <div className="flex items-center gap-2 shrink-0">
+                <Label htmlFor="download-per-page" className="text-sm text-muted-foreground whitespace-nowrap">
+                  Per page:
+                </Label>
+                <Select
+                  id="download-per-page"
+                  value={String(downloadPerPage)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDownloadPerPage(Number(e.target.value) as 1 | 2 | 3 | 4)}
+                  className="w-20 h-9"
+                >
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                </Select>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleBulkDownloadQr}
+                  className="gap-2 shadow-sm"
+                >
+                  <FileDown className="h-4 w-4" />
+                  Download ({selectedVehiclesWithQr.length})
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -327,7 +616,7 @@ export default function Vehicles() {
               onValueChange={setExpandedGroups}
               className="space-y-2"
             >
-              {filteredGroups.map((group) => {
+              {filteredGroups.map((group: VehicleGroup) => {
                 const groupId = `group-${group.groupId}`;
                 const isFullySelected = isGroupFullySelected(group);
                 const isPartiallySelected = isGroupPartiallySelected(group);
@@ -367,8 +656,9 @@ export default function Vehicles() {
                     <AccordionContent>
                       <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 pl-6 md:pl-8">
                         <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-border" />
-                        {group.vehicles.map((vehicle) => {
+                        {group.vehicles.map((vehicle: Vehicle) => {
                           const hasQr = !!getQrCodeValue(vehicle.qrCode);
+                          const qrCodeDataUrl = getQrCodeDataUrl(vehicle);
                           const isSelected = selectedVehicles.has(vehicle.thirdPartyId);
 
                           return (
@@ -387,37 +677,41 @@ export default function Vehicles() {
                                   disabled={hasQr}
                                   className="mt-0.5"
                                 />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex flex-col gap-1">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="font-medium text-sm">
-                                        {vehicle.plate ?? 'N/A'}
-                                      </span>
-                                      <span className="text-muted-foreground text-xs">—</span>
-                                      <span className="text-muted-foreground text-sm">
-                                        {vehicle.model ?? 'N/A'}
-                                      </span>
-                                    </div>
-                                    {hasQr && (
-                                      <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
-                                        <QrCode className="h-3 w-3" />
-                                        QR Code Available
-                                      </span>
-                                    )}
+                                <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
+                                  <div className="flex flex-col gap-0.5 min-w-0">
+                                    <span className="font-medium text-sm">
+                                      {vehicle.plate ?? 'N/A'}
+                                    </span>
+                                    <span className="text-muted-foreground text-xs">
+                                      {vehicle.model ?? 'N/A'}
+                                    </span>
                                   </div>
+                                  {qrCodeDataUrl && (
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                      <img
+                                        src={qrCodeDataUrl}
+                                        alt={`QR Code for ${vehicle.plate ?? 'vehicle'}`}
+                                        className="h-6 w-6 object-contain cursor-pointer hover:opacity-80 transition-opacity"
+                                        onClick={() => vehicle.thirdPartyId && openQrSheet(vehicle.thirdPartyId)}
+                                        title="Click to view QR code details"
+                                      />
+                                    </div>
+                                  )}
+                                  {hasQr && !qrCodeDataUrl && (
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                      <QrCode className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => vehicle.thirdPartyId && openQrSheet(vehicle.thirdPartyId)}
+                                        className="h-6 px-2 text-xs"
+                                      >
+                                        View
+                                      </Button>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
-                              {hasQr && vehicle.thirdPartyId && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openQrSheet(vehicle.thirdPartyId)}
-                                  className="gap-2 w-full justify-start text-xs h-8"
-                                >
-                                  <ScanLine className="h-3 w-3" />
-                                  View QR Code
-                                </Button>
-                              )}
                             </div>
                           );
                         })}
@@ -542,6 +836,127 @@ export default function Vehicles() {
                   </div>
                 </div>
               ) : null}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* QR Codes Preview Modal */}
+      {previewModalOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity"
+            aria-hidden
+            onClick={closePreviewModal}
+          />
+          <div
+            className={cn(
+              'fixed left-1/2 top-1/2 z-50 w-full max-w-4xl -translate-x-1/2 -translate-y-1/2',
+              'bg-card border shadow-xl rounded-lg',
+              'flex flex-col max-h-[90vh]'
+            )}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="preview-modal-title"
+          >
+            <div className="flex items-center justify-between border-b px-6 py-4">
+              <h2 id="preview-modal-title" className="text-lg font-semibold flex items-center gap-2">
+                <Eye className="h-5 w-5 text-primary" />
+                Preview Generated QR Codes ({previewVehicleIds.length})
+              </h2>
+              <Button variant="ghost" size="icon" onClick={closePreviewModal} aria-label="Close">
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              {previewQrQueries.isLoading ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <Loader2 className="h-10 w-10 animate-spin text-muted-foreground mb-4" />
+                  <p className="text-sm text-muted-foreground">Loading QR codes…</p>
+                </div>
+              ) : previewQrQueries.error ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-2">Could not load QR codes.</p>
+                  <Button variant="outline" size="sm" onClick={closePreviewModal}>
+                    Close
+                  </Button>
+                </div>
+              ) : previewQrQueries.data ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {previewQrQueries.data.map((item, index) => {
+                    const vehicle = previewVehicles[index];
+                    const qrData = item.qrCode;
+                    const plate = vehicle?.plate ?? `Vehicle ${item.vehicleId}`;
+
+                    return (
+                      <div
+                        key={item.vehicleId}
+                        className="flex flex-col gap-3 p-4 rounded-lg border bg-card"
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="rounded-lg border-2 border-border bg-white p-3 shadow-sm">
+                            {qrData?.qrCodeDataUrl ? (
+                              <img
+                                src={qrData.qrCodeDataUrl}
+                                alt={`QR Code for ${plate}`}
+                                className="h-32 w-32 object-contain"
+                              />
+                            ) : (
+                              <div className="h-32 w-32 flex items-center justify-center bg-muted/50 rounded">
+                                <QrCode className="h-12 w-12 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-center">
+                            <p className="font-medium text-sm">{plate}</p>
+                            {vehicle?.model && (
+                              <p className="text-xs text-muted-foreground">{vehicle.model}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          {qrData && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setQrSheetThirdPartyId(item.vehicleId);
+                                  setQrSheetOpen(true);
+                                  closePreviewModal();
+                                }}
+                                className="flex-1 gap-2 text-xs"
+                              >
+                                <ScanLine className="h-3 w-3" />
+                                View
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => qrData && downloadPreviewQrPdf(qrData)}
+                                className="flex-1 gap-2 text-xs"
+                              >
+                                <Download className="h-3 w-3" />
+                                PDF
+                              </Button>
+                            </>
+                          )}
+                          {!qrData && item.error && (
+                            <div className="flex-1 text-xs text-destructive text-center py-2">
+                              Failed to load
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t px-6 py-4">
+              <Button variant="outline" onClick={closePreviewModal}>
+                Close
+              </Button>
             </div>
           </div>
         </>
