@@ -80,6 +80,40 @@ export interface CurrentUser {
   [key: string]: unknown;
 }
 
+export interface Vehicle {
+  id: number;
+  thirdPartyId: number;
+  accountId: number;
+  plate: string;
+  model: string;
+  brand?: string;
+  year?: number;
+  tag2?: string;
+  isActive: boolean;
+  lastSyncedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  qrCode?: string | null | { qrCode?: string };
+}
+
+export interface VehicleGroup {
+  groupId: number;
+  groupName: string;
+  total: number;
+  vehicles: Vehicle[];
+}
+
+export interface BulkQrCodeRequest {
+  vehicleIds: number[];
+}
+
+export interface BulkQrCodeResponse {
+  success: boolean;
+  created: number;
+  failed: number;
+  errors?: Array<{ vehicleId: number; error: string }>;
+}
+
 export const dashboardApi = {
   getOverview: async (): Promise<DashboardOverview> => {
     const response = await apiClient.get<DashboardOverview>('/dashboard/overview');
@@ -159,6 +193,22 @@ export const dashboardApi = {
   generateVehicleQrCode: async (thirdPartyId: number): Promise<QrCodeResponse> => {
     const response = await apiClient.post<QrCodeResponse>(
       `/vehicles/${thirdPartyId}/qr-code`
+    );
+    return response.data;
+  },
+
+  /** Get vehicles grouped by groups */
+  getVehicleGroups: async (database?: string): Promise<VehicleGroup[]> => {
+    const endpoint = database ? `/vehicles/groups/${database}` : '/vehicles/groups';
+    const response = await apiClient.get<VehicleGroup[]>(endpoint);
+    return response.data;
+  },
+
+  /** Bulk create QR codes for multiple vehicles */
+  bulkCreateQrCodes: async (vehicleIds: number[]): Promise<BulkQrCodeResponse> => {
+    const response = await apiClient.post<BulkQrCodeResponse>(
+      '/vehicles/qr-codes/bulk',
+      { vehicleIds }
     );
     return response.data;
   },

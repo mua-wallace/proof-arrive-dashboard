@@ -29,8 +29,16 @@ export default function Login() {
       navigate('/app');
     },
     onError: (err: any) => {
+      const message = err.response?.data?.message ?? err.message;
       console.error('❌ Login failed:', err.response?.data || err.message);
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      // Network Error = request never reached server (CORS, unreachable, SSL, etc.)
+      if (err.message === 'Network Error' || err.code === 'ERR_NETWORK') {
+        setError(
+          'Cannot reach the server. Check that the API is running over HTTPS and allows this origin (CORS).'
+        );
+      } else {
+        setError(message || 'Login failed. Please check your credentials.');
+      }
     },
   });
 

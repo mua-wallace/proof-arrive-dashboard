@@ -1,25 +1,20 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { dashboardApi, PaginateQuery, PaginateResult } from '@/api/dashboard';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { dashboardApi, VehicleGroup, Vehicle } from '@/api/dashboard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from '@/components/ui/accordion';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Car,
   Search,
-  ChevronLeft,
-  ChevronRight,
-  ArrowUpDown,
   Loader2,
   QrCode,
   X,
@@ -27,46 +22,32 @@ import {
   Hash,
   Tag,
   FileDown,
-  Plus,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { formatNumber } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
 export default function Vehicles() {
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState('');
-  const [searchBy, setSearchBy] = useState('plate,model,brand');
-  const [sortBy, setSortBy] = useState('createdAt:DESC');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [qrSheetOpen, setQrSheetOpen] = useState(false);
   const [qrSheetThirdPartyId, setQrSheetThirdPartyId] = useState<number | null>(null);
-  const [generateModalOpen, setGenerateModalOpen] = useState(false);
-  const [selectedThirdPartyIdForGenerate, setSelectedThirdPartyIdForGenerate] = useState<string>('');
+  const [selectedVehicles, setSelectedVehicles] = useState<Set<number>>(new Set());
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const queryClient = useQueryClient();
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-      setPage(1);
     }, 500);
     return () => clearTimeout(timer);
   }, [search]);
 
-  const query: PaginateQuery = {
-    page,
-    limit,
-    include: 'qrCodes',
-    search: debouncedSearch || undefined,
-    searchBy: searchBy || undefined,
-    sortBy: sortBy || undefined,
-  };
-
-  const { data, isLoading, error } = useQuery<PaginateResult<any>>({
-    queryKey: ['vehicles', query],
-    queryFn: () => dashboardApi.getVehicles(query),
-    placeholderData: keepPreviousData,
+  const { data: vehicleGroups, isLoading, error } = useQuery<VehicleGroup[]>({
+    queryKey: ['vehicle-groups', 'database'],
+    queryFn: () => dashboardApi.getVehicleGroups('database'),
   });
 
   const {
@@ -79,24 +60,36 @@ export default function Vehicles() {
     enabled: qrSheetOpen && qrSheetThirdPartyId != null,
   });
 
-  const { data: vehiclesForDropdown } = useQuery<PaginateResult<any>>({
-    queryKey: ['vehicles', 'dropdown', { page: 1, limit: 200, include: 'qrCodes' }],
-    queryFn: () =>
-      dashboardApi.getVehicles({ page: 1, limit: 200, include: 'qrCodes' }),
-    enabled: generateModalOpen,
-  });
-
-  const generateQrMutation = useMutation({
-    mutationFn: (thirdPartyId: number) => dashboardApi.generateVehicleQrCode(thirdPartyId),
-    onSuccess: (_, thirdPartyId) => {
+  const bulkCreateQrMutation = useMutation({
+    mutationFn: (vehicleIds: number[]) => dashboardApi.bulkCreateQrCodes(vehicleIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicle-groups'] });
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      setGenerateModalOpen(false);
-      setSelectedThirdPartyIdForGenerate('');
-      openQrSheet(thirdPartyId);
+      setSelectedVehicles(new Set());
     },
   });
 
-  const vehiclesData = data as PaginateResult<any> | undefined;
+  // Filter groups and vehicles based on search
+  const filteredGroups = useMemo(() => {
+    if (!vehicleGroups) return [];
+    if (!debouncedSearch) return vehicleGroups;
+
+    const searchLower = debouncedSearch.toLowerCase();
+    return vehicleGroups
+      .map((group) => {
+        const filteredVehicles = group.vehicles.filter(
+          (vehicle) =>
+            vehicle.plate?.toLowerCase().includes(searchLower) ||
+            vehicle.model?.toLowerCase().includes(searchLower)
+        );
+        return {
+          ...group,
+          vehicles: filteredVehicles,
+          total: filteredVehicles.length,
+        };
+      })
+      .filter((group) => group.vehicles.length > 0);
+  }, [vehicleGroups, debouncedSearch]);
 
   const openQrSheet = (thirdPartyId: number) => {
     setQrSheetThirdPartyId(thirdPartyId);
@@ -111,7 +104,7 @@ export default function Vehicles() {
   const downloadQrPdf = () => {
     if (!qrDetail) return;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pageW = 210; // A4 width in mm
+    const pageW = 210;
     const margin = 20;
     let y = 20;
 
@@ -157,29 +150,7 @@ export default function Vehicles() {
     doc.save(filename);
   };
 
-  const handleSort = (field: string) => {
-    const [currentField, currentDirection] = sortBy.split(':');
-    const newDirection = currentField === field && currentDirection === 'ASC' ? 'DESC' : 'ASC';
-    setSortBy(`${field}:${newDirection}`);
-  };
-
-  const SortButton = ({ field, children }: { field: string; children: React.ReactNode }) => {
-    const [currentField] = sortBy.split(':');
-    const isActive = currentField === field;
-    return (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-8 gap-1"
-        onClick={() => handleSort(field)}
-      >
-        {children}
-        <ArrowUpDown className={`h-3 w-3 ${isActive ? 'text-primary' : ''}`} />
-      </Button>
-    );
-  };
-
-  /** Resolve QR code value: API may return null, a string, or an object { qrCode: string } */
+  /** Resolve QR code value */
   const getQrCodeValue = (qrCode: string | null | { qrCode?: string } | undefined): string | null => {
     if (qrCode == null) return null;
     if (typeof qrCode === 'string') return qrCode;
@@ -189,46 +160,65 @@ export default function Vehicles() {
     return null;
   };
 
-  const renderQrCode = (qrCodeValue: string | null, vehicle: any) => {
-    const thirdPartyId = vehicle?.thirdPartyId;
-    const hasQr = !!qrCodeValue && thirdPartyId != null;
-    const content = !qrCodeValue ? (
-      <span className="text-muted-foreground">Not Generated</span>
-    ) : qrCodeValue.startsWith('data:image') ? (
-      <div className="flex items-center gap-2">
-        <img src={qrCodeValue} alt="QR Code" className="h-8 w-8" />
-        <QrCode className="h-4 w-4 text-muted-foreground" />
-      </div>
-    ) : (
-      <div className="flex items-center gap-2">
-        <QrCode className="h-4 w-4 text-primary" />
-        <span className="text-xs font-mono max-w-[100px] truncate">{qrCodeValue}</span>
-      </div>
-    );
-    if (hasQr) {
-      return (
-        <button
-          type="button"
-          onClick={() => openQrSheet(thirdPartyId)}
-          className={cn(
-            'flex items-center gap-2 rounded-md px-2 py-1 -mx-2 -my-1',
-            'hover:bg-accent/80 transition-colors cursor-pointer text-left w-full',
-            'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
-          )}
-          title="View QR code details"
-        >
-          {content}
-        </button>
-      );
-    }
-    return content;
+  // Handle vehicle selection
+  const toggleVehicleSelection = (vehicleId: number) => {
+    setSelectedVehicles((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(vehicleId)) {
+        newSet.delete(vehicleId);
+      } else {
+        newSet.add(vehicleId);
+      }
+      return newSet;
+    });
   };
 
-  const handleGenerateQrSubmit = () => {
-    const id = selectedThirdPartyIdForGenerate ? Number(selectedThirdPartyIdForGenerate) : null;
-    if (id == null || Number.isNaN(id)) return;
-    generateQrMutation.mutate(id);
+  // Handle select all vehicles in a group
+  const toggleGroupSelection = (group: VehicleGroup) => {
+    const groupVehicleIds = group.vehicles.map((v) => v.thirdPartyId);
+    const allSelected = groupVehicleIds.every((id) => selectedVehicles.has(id));
+
+    setSelectedVehicles((prev) => {
+      const newSet = new Set(prev);
+      if (allSelected) {
+        groupVehicleIds.forEach((id) => newSet.delete(id));
+      } else {
+        groupVehicleIds.forEach((id) => newSet.add(id));
+      }
+      return newSet;
+    });
   };
+
+  // Check if all vehicles in a group are selected
+  const isGroupFullySelected = (group: VehicleGroup): boolean => {
+    if (group.vehicles.length === 0) return false;
+    return group.vehicles.every((v) => selectedVehicles.has(v.thirdPartyId));
+  };
+
+  // Check if some vehicles in a group are selected
+  const isGroupPartiallySelected = (group: VehicleGroup): boolean => {
+    const selectedCount = group.vehicles.filter((v) => selectedVehicles.has(v.thirdPartyId)).length;
+    return selectedCount > 0 && selectedCount < group.vehicles.length;
+  };
+
+  // Handle bulk QR code generation
+  const handleBulkGenerateQr = () => {
+    if (selectedVehicles.size === 0) return;
+    const vehicleIds = Array.from(selectedVehicles);
+    bulkCreateQrMutation.mutate(vehicleIds);
+  };
+
+  // Get total selected count
+  const totalSelected = selectedVehicles.size;
+
+  // Get vehicles without QR codes that are selected
+  const selectedVehiclesWithoutQr = useMemo(() => {
+    if (!vehicleGroups) return [];
+    const allVehicles = vehicleGroups.flatMap((g) => g.vehicles);
+    return allVehicles.filter(
+      (v) => selectedVehicles.has(v.thirdPartyId) && !getQrCodeValue(v.qrCode)
+    );
+  }, [vehicleGroups, selectedVehicles]);
 
   return (
     <div className="space-y-6">
@@ -239,86 +229,49 @@ export default function Vehicles() {
             Vehicles
           </h1>
           <p className="text-muted-foreground">
-            View and manage vehicles in the system
+            View and manage vehicles grouped by categories
           </p>
         </div>
-        <Button
-          variant="default"
-          size="sm"
-          onClick={() => setGenerateModalOpen(true)}
-          className="gap-2 shadow-sm shrink-0"
-        >
-          <Plus className="h-4 w-4" />
-          Generate QR Code
-        </Button>
+        {totalSelected > 0 && (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleBulkGenerateQr}
+            disabled={bulkCreateQrMutation.isPending || selectedVehiclesWithoutQr.length === 0}
+            className="gap-2 shadow-sm shrink-0"
+          >
+            {bulkCreateQrMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <QrCode className="h-4 w-4" />
+                Generate QR Codes ({selectedVehiclesWithoutQr.length})
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Search & Filter</CardTitle>
-          <CardDescription>Find vehicles by plate, model, brand, or other fields</CardDescription>
+          <CardTitle>Search</CardTitle>
+          <CardDescription>Find vehicles by plate or model</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="space-y-2">
-              <Label htmlFor="search">Search</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="search"
-                  placeholder="Search vehicles..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="searchBy">Search Fields</Label>
-              <Select
-                id="searchBy"
-                value={searchBy}
-                onChange={(e) => setSearchBy(e.target.value)}
-              >
-                <option value="plate,model,brand">Plate, Model & Brand</option>
-                <option value="plate">Plate Only</option>
-                <option value="model">Model Only</option>
-                <option value="brand">Brand Only</option>
-                <option value="tag2">Tag</option>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sortBy">Sort By</Label>
-              <Select
-                id="sortBy"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-              >
-                <option value="createdAt:DESC">Newest First</option>
-                <option value="createdAt:ASC">Oldest First</option>
-                <option value="plate:ASC">Plate A-Z</option>
-                <option value="plate:DESC">Plate Z-A</option>
-                <option value="model:ASC">Model A-Z</option>
-                <option value="brand:ASC">Brand A-Z</option>
-                <option value="year:DESC">Year (Newest)</option>
-                <option value="year:ASC">Year (Oldest)</option>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="limit">Items Per Page</Label>
-              <Select
-                id="limit"
-                value={limit}
-                onChange={(e) => {
-                  setLimit(Number(e.target.value));
-                  setPage(1);
-                }}
-              >
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-              </Select>
+          <div className="space-y-2">
+            <Label htmlFor="search">Search</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="search"
+                placeholder="Search vehicles by plate or model..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
             </div>
           </div>
         </CardContent>
@@ -328,11 +281,16 @@ export default function Vehicles() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Vehicles List</CardTitle>
+              <CardTitle>Vehicle Groups</CardTitle>
               <CardDescription>
-                {vehiclesData && vehiclesData.meta && vehiclesData.meta.totalItems > 0
-                  ? `Showing ${(page - 1) * limit + 1} to ${Math.min(page * limit, vehiclesData.meta.totalItems)} of ${formatNumber(vehiclesData.meta.totalItems)} vehicles`
-                  : 'No vehicles found'}
+                {vehicleGroups
+                  ? `${vehicleGroups.length} groups, ${vehicleGroups.reduce((sum, g) => sum + g.total, 0)} total vehicles`
+                  : 'Loading...'}
+                {totalSelected > 0 && (
+                  <span className="ml-2 text-primary font-medium">
+                    • {totalSelected} selected
+                  </span>
+                )}
               </CardDescription>
             </div>
           </div>
@@ -357,186 +315,123 @@ export default function Vehicles() {
                 Retry
               </Button>
             </div>
-          ) : !vehiclesData || !vehiclesData.data || vehiclesData.data.length === 0 ? (
+          ) : !filteredGroups || filteredGroups.length === 0 ? (
             <div className="text-center py-12">
               <Car className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">No vehicles found</p>
             </div>
           ) : (
-            <>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>
-                        <SortButton field="plate">Plate</SortButton>
-                      </TableHead>
-                      <TableHead>
-                        <SortButton field="model">Model</SortButton>
-                      </TableHead>
-                      <TableHead>
-                        <SortButton field="brand">Brand</SortButton>
-                      </TableHead>
-                      <TableHead>
-                        <SortButton field="year">Year</SortButton>
-                      </TableHead>
-                      <TableHead>Tag</TableHead>
-                      <TableHead>QR-Code</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {vehiclesData.data.map((vehicle: any) => (
-                      <TableRow key={vehicle.id}>
-                        <TableCell className="font-medium">{vehicle.plate ?? 'N/A'}</TableCell>
-                        <TableCell>{vehicle.model ?? 'N/A'}</TableCell>
-                        <TableCell>{vehicle.brand ?? 'N/A'}</TableCell>
-                        <TableCell>{vehicle.year ?? 'N/A'}</TableCell>
-                        <TableCell>{vehicle.tag2 ?? 'N/A'}</TableCell>
-                        <TableCell>{renderQrCode(getQrCodeValue(vehicle.qrCode), vehicle)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+            <Accordion
+              type="multiple"
+              value={expandedGroups}
+              onValueChange={setExpandedGroups}
+              className="space-y-2"
+            >
+              {filteredGroups.map((group) => {
+                const groupId = `group-${group.groupId}`;
+                const isFullySelected = isGroupFullySelected(group);
+                const isPartiallySelected = isGroupPartiallySelected(group);
 
-              {vehiclesData.meta && vehiclesData.meta.totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-muted-foreground">
-                    Page {vehiclesData.meta.currentPage} of {vehiclesData.meta.totalPages}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </Button>
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: Math.min(5, vehiclesData.meta.totalPages) }, (_, i) => {
-                        let pageNum;
-                        if (vehiclesData.meta.totalPages <= 5) {
-                          pageNum = i + 1;
-                        } else if (page <= 3) {
-                          pageNum = i + 1;
-                        } else if (page >= vehiclesData.meta.totalPages - 2) {
-                          pageNum = vehiclesData.meta.totalPages - 4 + i;
-                        } else {
-                          pageNum = page - 2 + i;
-                        }
-                        return (
-                          <Button
-                            key={pageNum}
-                            variant={page === pageNum ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setPage(pageNum)}
-                            className="w-10"
-                          >
-                            {pageNum}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage((p) => Math.min(vehiclesData.meta.totalPages, p + 1))}
-                      disabled={page === vehiclesData.meta.totalPages}
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
+                return (
+                  <AccordionItem key={group.groupId} value={groupId}>
+                    <AccordionTrigger className="hover:no-underline">
+                      <div className="flex items-center gap-3 flex-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleGroupSelection(group);
+                          }}
+                          className="flex items-center justify-center w-5 h-5"
+                        >
+                          {isFullySelected ? (
+                            <CheckSquare className="h-5 w-5 text-primary" />
+                          ) : isPartiallySelected ? (
+                            <div className="relative w-5 h-5 border-2 border-primary rounded-sm bg-primary/10">
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-2 h-0.5 bg-primary" />
+                              </div>
+                            </div>
+                          ) : (
+                            <Square className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </button>
+                        <div className="flex-1 text-left">
+                          <span className="font-semibold">{group.groupName}</span>
+                          <span className="ml-2 text-sm text-muted-foreground">
+                            ({group.total} {group.total === 1 ? 'vehicle' : 'vehicles'})
+                          </span>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pt-2 pl-6 md:pl-8">
+                        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-border" />
+                        {group.vehicles.map((vehicle) => {
+                          const hasQr = !!getQrCodeValue(vehicle.qrCode);
+                          const isSelected = selectedVehicles.has(vehicle.thirdPartyId);
+
+                          return (
+                            <div
+                              key={vehicle.id}
+                              className={cn(
+                                'flex flex-col gap-2 p-3 rounded-md border transition-colors',
+                                isSelected && 'bg-accent border-primary/20',
+                                !isSelected && 'hover:bg-muted/50'
+                              )}
+                            >
+                              <div className="flex items-start gap-2">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => toggleVehicleSelection(vehicle.thirdPartyId)}
+                                  disabled={hasQr}
+                                  className="mt-0.5"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="font-medium text-sm">
+                                        {vehicle.plate ?? 'N/A'}
+                                      </span>
+                                      <span className="text-muted-foreground text-xs">—</span>
+                                      <span className="text-muted-foreground text-sm">
+                                        {vehicle.model ?? 'N/A'}
+                                      </span>
+                                    </div>
+                                    {hasQr && (
+                                      <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                                        <QrCode className="h-3 w-3" />
+                                        QR Code Available
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              {hasQr && vehicle.thirdPartyId && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openQrSheet(vehicle.thirdPartyId)}
+                                  className="gap-2 w-full justify-start text-xs h-8"
+                                >
+                                  <ScanLine className="h-3 w-3" />
+                                  View QR Code
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
           )}
         </CardContent>
       </Card>
 
-      {/* Generate QR Code modal */}
-      {generateModalOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
-            aria-hidden
-            onClick={() => !generateQrMutation.isPending && setGenerateModalOpen(false)}
-          />
-          <div
-            className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-card p-6 shadow-xl"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="generate-qr-title"
-          >
-            <h2 id="generate-qr-title" className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <QrCode className="h-5 w-5 text-primary" />
-              Generate QR Code
-            </h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Select a vehicle without a QR code to generate one.
-            </p>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="generate-vehicle-select">Vehicle</Label>
-                <Select
-                  id="generate-vehicle-select"
-                  value={selectedThirdPartyIdForGenerate}
-                  onChange={(e) => setSelectedThirdPartyIdForGenerate(e.target.value)}
-                  disabled={generateQrMutation.isPending}
-                >
-                  <option value="">Select a vehicle…</option>
-                  {(vehiclesForDropdown?.data ?? [])
-                    .filter((v: any) => !getQrCodeValue(v.qrCode))
-                    .map((v: any) => (
-                      <option key={v.id} value={v.thirdPartyId ?? v.id}>
-                        {v.plate ?? 'N/A'}
-                        {v.model ? ` — ${v.model}` : ''}
-                        {v.brand ? ` (${v.brand})` : ''}
-                      </option>
-                    ))}
-                </Select>
-                {(vehiclesForDropdown?.data ?? []).filter((v: any) => !getQrCodeValue(v.qrCode)).length === 0 &&
-                  vehiclesForDropdown?.data != null && (
-                    <p className="text-xs text-muted-foreground">
-                      All vehicles already have a QR code.
-                    </p>
-                  )}
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setGenerateModalOpen(false)}
-                  disabled={generateQrMutation.isPending}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="default"
-                  onClick={handleGenerateQrSubmit}
-                  disabled={!selectedThirdPartyIdForGenerate || generateQrMutation.isPending}
-                  className="gap-2"
-                >
-                  {generateQrMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Generating…
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4" />
-                      Generate
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* QR Code detail sheet (slide-in from right) */}
+      {/* QR Code detail sheet */}
       {qrSheetOpen && (
         <>
           <div
