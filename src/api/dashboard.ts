@@ -216,4 +216,37 @@ export const dashboardApi = {
     );
     return response.data;
   },
+
+  /** Regenerate QR code for a vehicle by thirdPartyId */
+  regenerateVehicleQrCode: async (thirdPartyId: number): Promise<QrCodeResponse> => {
+    const response = await apiClient.post<QrCodeResponse>(
+      `/vehicles/${thirdPartyId}/qr-code/regenerate`
+    );
+    return response.data;
+  },
+
+  /** Get vehicle groups from Malambi API with pagination, filtering, searching, and sorting */
+  getVehicleGroupsFromApi: async (params?: {
+    page?: number;
+    limit?: number;
+    node?: string;
+    sync?: boolean;
+    search?: string;
+    sortBy?: string;
+  }): Promise<PaginateResult<VehicleGroup>> => {
+    const response = await apiClient.get<PaginateResult<VehicleGroup>>(
+      '/vehicles/groups/from-api',
+      {
+        params: {
+          page: params?.page ?? 1,
+          limit: params?.limit ?? 100,
+          node: params?.node ?? 'root',
+          sync: params?.sync ?? false,
+          search: params?.search,
+          sortBy: params?.sortBy,
+        },
+      }
+    );
+    return response.data;
+  },
 };

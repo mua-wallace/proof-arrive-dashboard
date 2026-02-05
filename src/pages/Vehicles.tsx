@@ -14,6 +14,14 @@ import {
 } from '@/components/ui/accordion';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
   Car,
   Search,
   Loader2,
@@ -27,11 +35,12 @@ import {
   Square,
   Eye,
   Download,
+  RotateCw,
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
-import { QrCodeResponse } from '@/api/dashboard';
+import { QrCodeResponse, CurrentUser } from '@/api/dashboard';
 
 export default function Vehicles() {
   const [search, setSearch] = useState('');
@@ -43,6 +52,7 @@ export default function Vehicles() {
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewVehicleIds, setPreviewVehicleIds] = useState<number[]>([]);
   const [downloadPerPage, setDownloadPerPage] = useState<1 | 2 | 3 | 4>(4);
+  const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -73,6 +83,33 @@ export default function Vehicles() {
     queryKey: ['vehicle-qr', qrSheetThirdPartyId],
     queryFn: () => dashboardApi.getVehicleQrCode(qrSheetThirdPartyId!),
     enabled: qrSheetOpen && qrSheetThirdPartyId != null,
+  });
+
+  // Get current user to check role
+  const { data: currentUser } = useQuery<CurrentUser>({
+    queryKey: ['current-user'],
+    queryFn: () => dashboardApi.getCurrentUser(),
+  });
+
+  // Check if user is admin or manager
+  const canRegenerateQr = currentUser?.role === 'admin' || currentUser?.role === 'manager';
+
+  // Regenerate QR code mutation
+  const regenerateQrMutation = useMutation({
+    mutationFn: (thirdPartyId: number) => dashboardApi.regenerateVehicleQrCode(thirdPartyId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicle-qr', qrSheetThirdPartyId] });
+      queryClient.invalidateQueries({ queryKey: ['vehicle-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      toast.success('Success', 'QR code regenerated successfully');
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message 
+        || error?.response?.data?.error 
+        || error?.message 
+        || 'Failed to regenerate QR code';
+      toast.error('Error Regenerating QR Code', errorMessage);
+    },
   });
 
   // Handle QR detail error
@@ -834,12 +871,79 @@ export default function Vehicles() {
                       </div>
                     </dl>
                   </div>
+                  {canRegenerateQr && qrSheetThirdPartyId && (
+                    <div className="flex justify-center pt-4 border-t">
+                      <Button
+                        variant="outline"
+                        size="default"
+                        onClick={() => setRegenerateDialogOpen(true)}
+                        className="gap-2"
+                        aria-label="Regenerate QR Code"
+                      >
+                        <RotateCw className="h-4 w-4" />
+                        Regenerate QR Code
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : null}
             </div>
           </div>
         </>
       )}
+
+      {/* Regenerate QR Code Confirmation Dialog */}
+      <Dialog open={regenerateDialogOpen} onOpenChange={setRegenerateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Regenerate QR Code</DialogTitle>
+            <DialogDescription>
+              This action will regenerate (replace) the QR code for this vehicle. The existing QR code will be invalidated and cannot be used anymore.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              <strong>Consequences:</strong>
+            </p>
+            <ul className="list-disc list-inside text-sm text-muted-foreground mt-2 space-y-1">
+              <li>The current QR code will be permanently replaced</li>
+              <li>Any printed copies of the old QR code will no longer work</li>
+              <li>You will need to reprint and distribute the new QR code</li>
+            </ul>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRegenerateDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => {
+                if (qrSheetThirdPartyId) {
+                  regenerateQrMutation.mutate(qrSheetThirdPartyId);
+                  setRegenerateDialogOpen(false);
+                }
+              }}
+              disabled={regenerateQrMutation.isPending}
+              className="gap-2"
+            >
+              {regenerateQrMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Regenerating...
+                </>
+              ) : (
+                <>
+                  <RotateCw className="h-4 w-4" />
+                  Confirm Regenerate
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* QR Codes Preview Modal */}
       {previewModalOpen && (
