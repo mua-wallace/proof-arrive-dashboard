@@ -15,17 +15,23 @@ import {
   ChevronRight,
   Settings,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-const navigation = [
+const mainNav = [
   { name: 'Dashboard', href: '/app', icon: LayoutDashboard },
-  { name: 'Users', href: '/app/users', icon: Users },
+  { name: 'Trips', href: '/app/trips', icon: ArrowRightLeft },
   { name: 'Vehicles', href: '/app/vehicles', icon: Car },
   { name: 'Centers', href: '/app/centers', icon: Building2 },
-  { name: 'Arrivals', href: '/app/arrivals', icon: ArrowRightLeft },
+];
+
+const operationsNav = [
+  { name: 'Arrivals', href: '/app/arrivals', icon: LogOut },
   { name: 'Exits', href: '/app/exits', icon: LogOut },
   { name: 'Incoming Vehicles', href: '/app/incoming-vehicles', icon: Truck },
   { name: 'Processing Stages', href: '/app/processing-stages', icon: Package },
 ];
+
+const otherNav = [{ name: 'Users', href: '/app/users', icon: Users }];
 
 export default function Layout() {
   const location = useLocation();
@@ -37,130 +43,142 @@ export default function Layout() {
     window.location.href = '/';
   };
 
-  const toggleSidebar = () => {
-    setIsSidebarCollapsed(!isSidebarCollapsed);
+  const toggleSidebar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
+
+  const NavLink = ({
+    item,
+    isActive,
+  }: {
+    item: (typeof mainNav)[0];
+    isActive: boolean;
+  }) => {
+    const Icon = item.icon;
+    return (
+      <Link
+        to={item.href}
+        title={isSidebarCollapsed ? item.name : undefined}
+        className={cn(
+          'flex items-center rounded-xl text-sm font-medium transition-all duration-200',
+          isSidebarCollapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5',
+          isActive
+            ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
+            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+        )}
+      >
+        <Icon className="h-5 w-5 flex-shrink-0" />
+        {!isSidebarCollapsed && <span>{item.name}</span>}
+      </Link>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen app-shell">
       <div className="flex h-screen">
         {/* Sidebar */}
         <aside
-          className={`${
-            isSidebarCollapsed ? 'w-16' : 'w-64'
-          } border-r bg-card/95 backdrop-blur transition-all duration-300 relative`}
+          className={cn(
+            'flex flex-col border-r border-border/80 bg-card/80 backdrop-blur-xl transition-all duration-300',
+            isSidebarCollapsed ? 'w-[72px]' : 'w-64'
+          )}
         >
-          <div className="flex h-full flex-col">
-            <div className="flex h-16 items-center border-b px-6 relative">
-              {!isSidebarCollapsed && (
+          {/* Brand */}
+          <div className="flex h-16 items-center border-b border-border/80 px-4">
+            {!isSidebarCollapsed && (
+              <div className="flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15">
+                  <span className="text-lg font-bold text-primary">P</span>
+                </div>
                 <div>
-                  <h1 className="text-xl font-bold tracking-tight">Proof Arrive</h1>
-                  <p className="text-[11px] text-muted-foreground">
-                    Live vehicle & arrival overview
+                  <h1 className="text-lg font-bold tracking-tight sidebar-brand">Proof Arrive</h1>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                    Fleet & trips
                   </p>
                 </div>
+              </div>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                'ml-auto h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground',
+                isSidebarCollapsed && 'mx-auto'
               )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
-                onClick={toggleSidebar}
-              >
-                {isSidebarCollapsed ? (
-                  <ChevronRight className="h-4 w-4" />
-                ) : (
-                  <ChevronLeft className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            <nav className={`flex-1 space-y-1 ${isSidebarCollapsed ? 'p-2' : 'p-4'}`}>
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={`flex items-center rounded-lg text-sm font-medium transition-colors ${
-                      isSidebarCollapsed
-                        ? 'justify-center px-0 py-2'
-                        : 'gap-3 px-3 py-2'
-                    } ${
-                      isActive
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                    }`}
-                    title={isSidebarCollapsed ? item.name : undefined}
-                  >
-                    <Icon className="h-5 w-5 flex-shrink-0" />
-                    {!isSidebarCollapsed && <span>{item.name}</span>}
-                  </Link>
-                );
-              })}
-            </nav>
-            {/* Settings link at bottom */}
-            <div className={isSidebarCollapsed ? 'p-2' : 'px-4 pb-2'}>
-              <Link
-                to="/app/settings"
-                className={`flex items-center rounded-lg text-sm font-medium transition-colors ${
-                  isSidebarCollapsed ? 'justify-center px-0 py-2' : 'gap-3 px-3 py-2'
-                } ${
-                  location.pathname === '/app/settings'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                }`}
-                title={isSidebarCollapsed ? 'Settings' : undefined}
-              >
-                <Settings className="h-5 w-5 flex-shrink-0" />
-                {!isSidebarCollapsed && <span>Settings</span>}
-              </Link>
+              onClick={toggleSidebar}
+            >
+              {isSidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </Button>
+          </div>
+
+          {/* Main nav */}
+          <nav className={cn('flex-1 overflow-y-auto', isSidebarCollapsed ? 'p-2' : 'p-3')}>
+            {!isSidebarCollapsed && (
+              <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Main
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {mainNav.map((item) => (
+                <NavLink key={item.name} item={item} isActive={location.pathname === item.href} />
+              ))}
             </div>
             {!isSidebarCollapsed && (
-              <div className="border-t p-4">
-                <div className="mb-2 px-3 text-xs text-muted-foreground">
-                  Signed in as
-                  <span className="ml-1 font-medium text-foreground">
-                    {user?.username ?? 'agent'}
-                  </span>
+              <>
+                <p className="mb-2 mt-5 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Other
+                </p>
+                <div className="space-y-0.5">
+                  {otherNav.map((item) => (
+                    <NavLink key={item.name} item={item} isActive={location.pathname === item.href} />
+                  ))}
                 </div>
+              </>
+            )}
+          </nav>
+
+          {/* Bottom: Settings + user */}
+          <div className={cn('border-t border-border/80', isSidebarCollapsed ? 'p-2' : 'p-3')}>
+            <Link
+              to="/app/settings"
+              title={isSidebarCollapsed ? 'Settings' : undefined}
+              className={cn(
+                'flex items-center rounded-xl text-sm font-medium transition-all',
+                isSidebarCollapsed ? 'justify-center py-2.5' : 'gap-3 px-3 py-2.5',
+                location.pathname === '/app/settings'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              <Settings className="h-5 w-5 flex-shrink-0" />
+              {!isSidebarCollapsed && <span>Settings</span>}
+            </Link>
+            {!isSidebarCollapsed && (
+              <div className="mt-3 rounded-xl bg-muted/60 p-3">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  Signed in
+                </p>
+                <p className="mt-0.5 truncate text-sm font-medium">{user?.username ?? 'agent'}</p>
                 <Button
                   variant="outline"
-                  className="w-full"
+                  size="sm"
+                  className="mt-2 w-full gap-2"
                   onClick={handleLogout}
                 >
-                  <LogOut className="mr-2 h-4 w-4" />
+                  <LogOut className="h-3.5 w-3.5" />
                   Logout
                 </Button>
               </div>
             )}
             {isSidebarCollapsed && (
-              <div className="border-t p-2 space-y-1">
-                <Link
-                  to="/app/settings"
-                  className={`flex justify-center rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground ${
-                    location.pathname === '/app/settings' ? 'bg-primary text-primary-foreground' : ''
-                  }`}
-                  title="Settings"
-                >
-                  <Settings className="h-5 w-5" />
-                </Link>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="w-full"
-                  onClick={handleLogout}
-                  title="Logout"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button variant="outline" size="icon" className="mt-2 w-full" onClick={handleLogout} title="Logout">
+                <LogOut className="h-4 w-4" />
+              </Button>
             )}
           </div>
         </aside>
 
-        {/* Main Content */}
+        {/* Main content */}
         <main className="flex-1 overflow-y-auto">
-          <div className="w-full px-4 py-4">
+          <div className="mx-auto w-full max-w-[1600px] px-3 py-5 sm:px-4">
             <Outlet />
           </div>
         </main>

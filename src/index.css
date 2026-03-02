@@ -10,20 +10,20 @@
     --card-foreground: 222.2 47.4% 11.2%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 47.4% 11.2%;
-    --primary: 160 84% 39%; /* logistics‑style emerald */
+    --primary: 160 84% 39%; /* logistics emerald */
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 199 89% 48%; /* route / tracking blue */
+    --accent: 199 89% 48%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 160 84% 39%;
-    --radius: 0.5rem;
+    --radius: 0.625rem;
   }
 
   .dark {
@@ -54,11 +54,40 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
   }
 }
 
-/* Soft gradient background for the public landing page */
+/* App shell: subtle gradient and content area */
+.app-shell {
+  background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(210 35% 96%) 50%, hsl(200 30% 97%) 100%);
+}
+.dark .app-shell {
+  background: linear-gradient(160deg, hsl(var(--background)) 0%, hsl(222 47% 6%) 100%);
+}
+
+/* Sidebar brand gradient */
+.sidebar-brand {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(160 70% 32%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Card hover lift */
+.card-hover {
+  @apply transition-all duration-200;
+}
+.card-hover:hover {
+  @apply shadow-lg -translate-y-0.5;
+}
+
+/* Soft glow for primary elements */
+.glow-primary {
+  box-shadow: 0 0 0 1px hsl(var(--primary) / 0.1), 0 4px 14px -4px hsl(var(--primary) / 0.2);
+}
+
+/* Landing page */
 .landing-bg {
   @apply bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-slate-50;
 }

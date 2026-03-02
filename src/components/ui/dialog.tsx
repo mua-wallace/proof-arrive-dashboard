@@ -7,9 +7,11 @@ export interface DialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   children: React.ReactNode
+  /** When true, dialog width grows with content (up to 90vw) instead of fixed max-width */
+  fitContent?: boolean
 }
 
-const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
+const Dialog = ({ open, onOpenChange, children, fitContent }: DialogProps) => {
   if (!open) return null
 
   return (
@@ -20,7 +22,12 @@ const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
         aria-hidden="true"
       />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="relative w-full max-w-lg rounded-lg border bg-card shadow-lg">
+        <div
+          className={cn(
+            "relative rounded-lg border bg-card shadow-lg [&>*]:max-w-none",
+            fitContent ? "w-max max-w-[90vw]" : "w-full max-w-lg"
+          )}
+        >
           {children}
         </div>
       </div>

@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import Centers from './pages/Centers';
 import Vehicles from './pages/Vehicles';
+import Trips from './pages/Trips';
 import Arrivals from './pages/Arrivals';
 import Exits from './pages/Exits';
 import IncomingVehicles from './pages/IncomingVehicles';
@@ -52,6 +53,7 @@ function App() {
             <Route path="users" element={<Users />} />
             <Route path="centers" element={<Centers />} />
             <Route path="vehicles" element={<Vehicles />} />
+            <Route path="trips" element={<Trips />} />
             <Route path="arrivals" element={<Arrivals />} />
             <Route path="exits" element={<Exits />} />
             <Route path="incoming-vehicles" element={<IncomingVehicles />} />

@@ -2,7 +2,7 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
 // Use HTTPS when the app is served over HTTPS to avoid Mixed Content blocking
 function getApiBaseUrl(): string {
-  let url = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
+  let url = import.meta.env.VITE_API_BASE_URL || 'https://proof-arrive.oplatforms.com/api/v1';
   if (typeof window !== 'undefined' && window.location?.protocol === 'https:' && url.startsWith('http://')) {
     url = url.replace(/^http:\/\//, 'https://');
   }

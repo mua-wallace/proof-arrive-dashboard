@@ -1,11 +1,25 @@
 import { useState, useEffect } from 'react';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { dashboardApi, PaginateQuery, PaginateResult } from '@/api/dashboard';
+import { useQuery, keepPreviousData, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  dashboardApi,
+  PaginateQuery,
+  PaginateResult,
+  type CenterQueueItem,
+  type CenterQueueSummary,
+} from '@/api/dashboard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -14,8 +28,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Building2, Search, ChevronLeft, ChevronRight, ArrowUpDown, Loader2 } from 'lucide-react';
-import { formatNumber } from '@/lib/utils';
+import { Building2, Search, ChevronLeft, ChevronRight, ArrowUpDown, Loader2, ListOrdered, Play } from 'lucide-react';
+import { formatNumber, formatDate } from '@/lib/utils';
+import { toast } from '@/lib/toast';
 
 export default function Centers() {
   const [page, setPage] = useState(1);
@@ -24,6 +39,9 @@ export default function Centers() {
   const [searchBy, setSearchBy] = useState('name');
   const [sortBy, setSortBy] = useState('name:ASC');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [queueModalCenterId, setQueueModalCenterId] = useState<number | null>(null);
+  const [queueType, setQueueType] = useState<'LOADING' | 'UNLOADING'>('LOADING');
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -48,6 +66,37 @@ export default function Centers() {
   });
 
   const centersData = data as PaginateResult<any> | undefined;
+
+  const { data: queueData, isLoading: queueLoading } = useQuery({
+    queryKey: ['center-queue', queueModalCenterId, queueType],
+    queryFn: () =>
+      dashboardApi.getCenterQueue(queueModalCenterId!, { type: queueType, isActive: true }),
+    enabled: queueModalCenterId != null,
+  });
+
+  const { data: queueSummary } = useQuery({
+    queryKey: ['center-queue-summary', queueModalCenterId],
+    queryFn: () => dashboardApi.getCenterQueueSummary(queueModalCenterId!),
+    enabled: queueModalCenterId != null,
+  });
+
+  const startNextMutation = useMutation({
+    mutationFn: () =>
+      dashboardApi.startNextService(queueModalCenterId!, { queueType }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['center-queue', queueModalCenterId, queueType] });
+      queryClient.invalidateQueries({ queryKey: ['center-queue-summary', queueModalCenterId] });
+      toast.success('Service started', 'Next vehicle in queue is now being served.');
+    },
+    onError: (err: any) => {
+      toast.error('Error', err?.response?.data?.message || err?.message || 'Failed to start next service');
+    },
+  });
+
+  const queueItems: CenterQueueItem[] = queueData?.data ?? [];
+  const centerName = queueModalCenterId
+    ? centersData?.data?.find((c: any) => c.id === queueModalCenterId)?.name ?? `Center ${queueModalCenterId}`
+    : '';
 
   const handleSort = (field: string) => {
     const [currentField, currentDirection] = sortBy.split(':');
@@ -205,6 +254,7 @@ export default function Centers() {
                       <TableHead>Time 2</TableHead>
                       <TableHead>Break Start</TableHead>
                       <TableHead>Break Stop</TableHead>
+                      <TableHead className="w-[100px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -218,6 +268,20 @@ export default function Centers() {
                         <TableCell>{center.time2 ?? 'N/A'}</TableCell>
                         <TableCell>{center.breakstart ?? 'N/A'}</TableCell>
                         <TableCell>{center.breakstop ?? 'N/A'}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => {
+                              setQueueModalCenterId(center.id);
+                              setQueueType('LOADING');
+                            }}
+                          >
+                            <ListOrdered className="h-3 w-3" />
+                            Queue
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -280,6 +344,101 @@ export default function Centers() {
           )}
         </CardContent>
       </Card>
+
+      {/* Center queue modal */}
+      <Dialog open={queueModalCenterId != null} onOpenChange={(open) => !open && setQueueModalCenterId(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ListOrdered className="h-5 w-5" />
+              Queue — {centerName}
+            </DialogTitle>
+            <DialogDescription>
+              View queue and start next service for loading or unloading
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 border-b pb-3">
+            <Button
+              variant={queueType === 'LOADING' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setQueueType('LOADING')}
+            >
+              Loading
+            </Button>
+            <Button
+              variant={queueType === 'UNLOADING' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setQueueType('UNLOADING')}
+            >
+              Unloading
+            </Button>
+          </div>
+          {queueSummary && (
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="rounded-lg border p-2">
+                <span className="text-muted-foreground">Loading (active)</span>
+                <p className="font-semibold">{queueSummary.loading?.active ?? queueSummary.loading ?? 0}</p>
+              </div>
+              <div className="rounded-lg border p-2">
+                <span className="text-muted-foreground">Unloading (active)</span>
+                <p className="font-semibold">{queueSummary.unloading?.active ?? queueSummary.unloading ?? 0}</p>
+              </div>
+            </div>
+          )}
+          <div className="flex-1 min-h-0 overflow-y-auto rounded-md border">
+            {queueLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : queueItems.length === 0 ? (
+              <div className="py-12 text-center text-sm text-muted-foreground">
+                No active {queueType.toLowerCase()} queue entries
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Position</TableHead>
+                    <TableHead>Vehicle</TableHead>
+                    <TableHead>Queued at</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {queueItems.map((item, index) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.position ?? index + 1}</TableCell>
+                      <TableCell>
+                        {(item.vehicle as any)?.plate ?? `Vehicle #${item.vehicleId}`}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(item.queuedAt)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="default"
+              onClick={() => startNextMutation.mutate()}
+              disabled={startNextMutation.isPending || queueLoading}
+              className="gap-2"
+            >
+              {startNextMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
+              Start next {queueType.toLowerCase()} service
+            </Button>
+            <Button variant="outline" onClick={() => setQueueModalCenterId(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
