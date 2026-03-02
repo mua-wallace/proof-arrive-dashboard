@@ -16,81 +16,54 @@ import {
   Car,
   Building2,
   Truck,
-  Package,
   Activity,
   ArrowRightLeft,
   Clock,
   ListOrdered,
   MapPin,
-  Loader2,
   AlertCircle,
   CheckCircle2,
   ArrowRight,
   Sparkles,
 } from 'lucide-react';
 import { formatDate, formatNumber } from '@/lib/utils';
-import { cn } from '@/lib/utils';
+import {
+  TRIP_STATUS_THEME,
+  getStatusTheme,
+  getStatusStyle,
+} from '@/lib/status-theme';
 
-const VEHICLE_STATUS_CONFIG: Record<
-  string,
-  { label: string; icon: typeof Car; color: string; bgClass: string; gradient: string }
-> = {
-  AVAILABLE: {
-    label: 'Available',
-    icon: Car,
-    color: 'text-emerald-600',
-    bgClass: 'bg-emerald-500/10 border-emerald-200 dark:border-emerald-800',
-    gradient: 'from-emerald-500/20 to-emerald-600/5',
-  },
-  IN_TRANSIT: {
-    label: 'In Transit',
-    icon: Truck,
-    color: 'text-blue-600',
-    bgClass: 'bg-blue-500/10 border-blue-200 dark:border-blue-800',
-    gradient: 'from-blue-500/20 to-blue-600/5',
-  },
-  WAITING_IN_QUEUE: {
-    label: 'In Queue',
-    icon: ListOrdered,
-    color: 'text-amber-600',
-    bgClass: 'bg-amber-500/10 border-amber-200 dark:border-amber-800',
-    gradient: 'from-amber-500/20 to-amber-600/5',
-  },
-  LOADING: {
-    label: 'Loading',
-    icon: Package,
-    color: 'text-violet-600',
-    bgClass: 'bg-violet-500/10 border-violet-200 dark:border-violet-800',
-    gradient: 'from-violet-500/20 to-violet-600/5',
-  },
-  UNLOADING: {
-    label: 'Unloading',
-    icon: Package,
-    color: 'text-purple-600',
-    bgClass: 'bg-purple-500/10 border-purple-200 dark:border-purple-800',
-    gradient: 'from-purple-500/20 to-purple-600/5',
-  },
-  IN_GARAGE: {
-    label: 'In Garage',
-    icon: Building2,
-    color: 'text-slate-600',
-    bgClass: 'bg-slate-500/10 border-slate-200 dark:border-slate-800',
-    gradient: 'from-slate-500/20 to-slate-600/5',
-  },
-};
+const VEHICLE_STATUS_KEYS = [
+  'WAITING_IN_QUEUE',
+  'LOADING',
+  'UNLOADING',
+  'AVAILABLE',
+  'IN_TRANSIT',
+  'ARRIVED',
+  'COMPLETED',
+  'ACTIVE',
+  'IDLE',
+  'IN_GARAGE',
+] as const;
+
+function getVehicleStatusConfig(statusKey: string) {
+  const theme = TRIP_STATUS_THEME[statusKey] ?? getStatusTheme(statusKey);
+  const style = getStatusStyle(theme.hex);
+  return { label: theme.label, icon: theme.icon, ...style };
+}
 
 function DashboardSkeleton() {
   return (
     <div className="space-y-8">
-      <div className="h-24 rounded-2xl bg-muted/50 animate-pulse" />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="h-20 rounded-2xl bg-muted/50 animate-pulse" />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-28 rounded-2xl bg-muted/50 animate-pulse" />
+          <div key={i} className="h-16 rounded-xl bg-muted/50 animate-pulse" />
         ))}
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-32 rounded-2xl bg-muted/50 animate-pulse" />
+          <div key={i} className="h-28 rounded-xl bg-muted/50 animate-pulse" />
         ))}
       </div>
     </div>
@@ -154,7 +127,7 @@ export default function Dashboard() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">Loading operational overview…</p>
         </div>
         <DashboardSkeleton />
@@ -172,69 +145,62 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Hero strip */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/90 via-primary to-primary/80 px-6 py-8 text-primary-foreground shadow-xl shadow-primary/20">
+      {/* Hero — Proof Arrive tint, badges for context */}
+      <header className="relative overflow-hidden rounded-2xl bg-primary px-6 py-6 text-primary-foreground shadow-lg border border-primary/20">
         <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-primary-foreground/90">
-              <Sparkles className="h-5 w-5" />
-              <span className="text-sm font-medium">Operational overview</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 font-medium">
+                <Sparkles className="h-3.5 w-3.5 mr-1" />
+                Operational overview
+              </Badge>
+              {errorReports && (
+                <Badge variant="secondary" className="bg-status-warning/90 text-white border-status-warning font-medium">
+                  <AlertCircle className="h-3.5 w-3.5 mr-1" />
+                  Partial data
+                </Badge>
+              )}
             </div>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-              Dashboard
-            </h1>
-            <p className="mt-1 max-w-md text-sm text-primary-foreground/85">
+            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Dashboard</h1>
+            <p className="mt-1 max-w-md text-sm text-primary-foreground/90">
               Real-time vehicle status, trips, and queue overview at a glance
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-medium backdrop-blur">
-              <Activity className="h-4 w-4" />
-              Live data
-            </div>
-            {errorReports && (
-              <Badge variant="secondary" className="bg-amber-400/20 text-amber-100 border-amber-300/30">
-                <AlertCircle className="h-3 w-3 mr-1" />
-                Partial data
-              </Badge>
-            )}
-          </div>
+          <Badge variant="secondary" className="w-fit bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 font-medium">
+            <Activity className="h-4 w-4 mr-1.5" />
+            Live data
+          </Badge>
         </div>
-        <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10" />
-        <div className="absolute -bottom-12 -right-12 h-56 w-56 rounded-full bg-white/5" />
-      </div>
+        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary-foreground/10" />
+        <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-primary-foreground/5" />
+      </header>
 
-      {/* Vehicle status cards */}
+      {/* Vehicle status — badge-style links, Proof Arrive status colors */}
       <section>
-        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-          <Car className="h-5 w-5 text-primary" />
+        <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
+          <Car className="h-4 w-4 text-primary" />
           Vehicles by status
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          {Object.entries(VEHICLE_STATUS_CONFIG).map(([key, config]) => {
+        <div className="flex flex-wrap gap-2">
+          {VEHICLE_STATUS_KEYS.map((key) => {
+            const config = getVehicleStatusConfig(key);
             const Icon = config.icon;
             const count = normalizedStatus[key] ?? 0;
             return (
               <Link key={key} to={`/app/vehicles?status=${key}`}>
-                <Card
-                  className={cn(
-                    'card-hover overflow-hidden border bg-gradient-to-br',
-                    config.gradient,
-                    config.bgClass
-                  )}
+                <Badge
+                  variant="outline"
+                  className="card-hover gap-1.5 border-2 px-3 py-1.5 text-xs font-semibold transition-all hover:shadow-md"
+                  style={{
+                    color: config.color,
+                    backgroundColor: config.backgroundColor,
+                    borderColor: config.borderColor,
+                  }}
                 >
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-4">
-                      <div className={cn('flex h-12 w-12 items-center justify-center rounded-xl', config.bgClass)}>
-                        <Icon className={cn('h-6 w-6', config.color)} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">{config.label}</p>
-                        <p className="text-2xl font-bold tabular-nums">{formatNumber(count)}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  <Icon className="h-3.5 w-3.5" style={{ color: config.color }} />
+                  <span>{config.label}</span>
+                  <span className="ml-0.5 tabular-nums opacity-90">({formatNumber(count)})</span>
+                </Badge>
               </Link>
             );
           })}
@@ -246,71 +212,79 @@ export default function Dashboard() {
         )}
       </section>
 
-      {/* KPI row */}
+      {/* KPI row — Proof Arrive semantic colors, badges for labels */}
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Link to="/app/trips">
-          <Card className="card-hover glow-primary border-l-4 border-l-primary">
-            <CardContent className="p-6">
+          <Card className="card-hover border-l-4 border-l-status-info bg-card">
+            <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Active trips</p>
-                  <p className="mt-1 text-3xl font-bold">{formatNumber(ongoingCount)}</p>
+                  <Badge variant="secondary" className="mb-2 text-[10px] font-medium uppercase tracking-wider border-status-info/30 bg-status-info/10 text-status-info">
+                    Trips
+                  </Badge>
+                  <p className="text-2xl font-bold text-foreground">{formatNumber(ongoingCount)}</p>
                   {completedCount !== undefined && completedCount > 0 && (
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-0.5 text-xs text-muted-foreground">
                       {formatNumber(completedCount)} completed in period
                     </p>
                   )}
                 </div>
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15">
-                  <ArrowRightLeft className="h-7 w-7 text-primary" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-status-info/15">
+                  <ArrowRightLeft className="h-6 w-6 text-status-info" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </Link>
 
-        <Card className="card-hover border-l-4 border-l-cyan-500 bg-gradient-to-br from-cyan-500/5 to-transparent">
-          <CardContent className="p-6">
+        <Card className="card-hover border-l-4 border-l-status-success bg-card">
+          <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Completion rate</p>
-                <p className="mt-1 text-3xl font-bold">
+                <Badge variant="secondary" className="mb-2 text-[10px] font-medium uppercase tracking-wider border-status-success/30 bg-status-success/10 text-status-success">
+                  Completion
+                </Badge>
+                <p className="text-2xl font-bold text-foreground">
                   {typeof completionRate === 'number' ? `${completionRate.toFixed(1)}%` : '—'}
                 </p>
               </div>
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-500/15">
-                <CheckCircle2 className="h-7 w-7 text-cyan-600" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-status-success/15">
+                <CheckCircle2 className="h-6 w-6 text-status-success" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Link to="/app/centers">
-          <Card className="card-hover border-l-4 border-l-violet-500 bg-gradient-to-br from-violet-500/5 to-transparent">
-            <CardContent className="p-6">
+          <Card className="card-hover border-l-4 border-l-status-transit bg-card">
+            <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Centers</p>
-                  <p className="mt-1 text-3xl font-bold">{formatNumber(centerCount)}</p>
+                  <Badge variant="secondary" className="mb-2 text-[10px] font-medium uppercase tracking-wider border-status-transit/30 bg-status-transit/10 text-status-transit">
+                    Centers
+                  </Badge>
+                  <p className="text-2xl font-bold text-foreground">{formatNumber(centerCount)}</p>
                 </div>
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/15">
-                  <Building2 className="h-7 w-7 text-violet-600" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-status-transit/15">
+                  <Building2 className="h-6 w-6 text-status-transit" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </Link>
 
-        <Card className="card-hover border-l-4 border-l-amber-500 bg-gradient-to-br from-amber-500/5 to-transparent">
-          <CardContent className="p-6">
+        <Card className="card-hover border-l-4 border-l-status-warning bg-card">
+          <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Queues active</p>
-                <p className="mt-1 text-3xl font-bold">{formatNumber(queueActive)}</p>
+                <Badge variant="secondary" className="mb-2 text-[10px] font-medium uppercase tracking-wider border-status-warning/30 bg-status-warning/10 text-status-warning">
+                  Queues active
+                </Badge>
+                <p className="text-2xl font-bold text-foreground">{formatNumber(queueActive)}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">Loading / Unloading</p>
               </div>
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/15">
-                <ListOrdered className="h-7 w-7 text-amber-600" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-status-warning/15">
+                <ListOrdered className="h-6 w-6 text-status-warning" />
               </div>
             </div>
           </CardContent>
@@ -319,18 +293,18 @@ export default function Dashboard() {
 
       {/* Active trips + Quick links */}
       <div className="grid gap-6 lg:grid-cols-5">
-        <Card className="card-hover lg:col-span-3">
+        <Card className="card-hover border border-border bg-card lg:col-span-3">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-foreground">
                   <Truck className="h-5 w-5 text-primary" />
                   Active trips
                 </CardTitle>
                 <CardDescription>Ongoing trips between centers</CardDescription>
               </div>
               <Link to="/app/trips">
-                <Button variant="ghost" size="sm" className="gap-1.5 font-medium">
+                <Button variant="ghost" size="sm" className="gap-1.5 font-medium text-foreground">
                   View all
                   <ArrowRight className="h-4 w-4" />
                 </Button>
@@ -339,49 +313,55 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {activeTrips.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-muted py-14 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
-                  <ArrowRightLeft className="h-7 w-7 text-muted-foreground" />
-                </div>
-                <p className="mt-4 font-medium text-muted-foreground">No active trips</p>
-                <p className="mt-1 text-sm text-muted-foreground">Trips will appear here when in progress</p>
+              <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30 py-12 text-center">
+                <ArrowRightLeft className="h-10 w-10 text-muted-foreground" />
+                <p className="mt-3 font-medium text-muted-foreground">No active trips</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">Trips will appear here when in progress</p>
               </div>
             ) : (
               <ul className="space-y-2">
-                {activeTrips.slice(0, 8).map((trip) => (
-                  <li key={trip.id}>
-                    <Link
-                      to={`/app/trips?tripId=${trip.id}`}
-                      className="flex items-center gap-4 rounded-xl border bg-muted/30 p-3 transition-colors hover:bg-muted/60"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold truncate">
-                          {trip.vehicle?.plate ?? `Vehicle #${trip.vehicleId}`}
-                        </p>
-                        <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                          <MapPin className="h-3 w-3 shrink-0" />
-                          {trip.originCenter?.name ?? `Center ${trip.originCenterId}`}
-                          <span className="mx-1">→</span>
-                          {trip.destinationCenter?.name ?? (trip.destinationCenterId ? `Center ${trip.destinationCenterId}` : '—')}
-                        </p>
-                      </div>
-                      <Badge variant="secondary" className="shrink-0">
-                        {trip.phase?.replace(/_/g, ' ') ?? trip.status}
-                      </Badge>
-                      {trip.startedAt && (
-                        <span className="shrink-0 text-xs text-muted-foreground">{formatDate(trip.startedAt)}</span>
-                      )}
-                    </Link>
-                  </li>
-                ))}
+                {activeTrips.slice(0, 8).map((trip) => {
+                  const theme = getStatusTheme(trip.phase ?? trip.status);
+                  const displayLabel = theme.label !== '—' ? theme.label : (trip.phase?.replace(/_/g, ' ') ?? trip.status ?? '—');
+                  return (
+                    <li key={trip.id}>
+                      <Link
+                        to={`/app/trips?tripId=${trip.id}`}
+                        className="flex items-center gap-4 rounded-xl border border-border bg-muted/20 p-3 transition-colors hover:bg-muted/50"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-foreground truncate">
+                            {trip.vehicle?.plate ?? `Vehicle #${trip.vehicleId}`}
+                          </p>
+                          <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            {trip.originCenter?.name ?? `Center ${trip.originCenterId}`}
+                            <span className="mx-1">→</span>
+                            {trip.destinationCenter?.name ?? (trip.destinationCenterId ? `Center ${trip.destinationCenterId}` : '—')}
+                          </p>
+                        </div>
+                        <Badge
+                          variant="secondary"
+                          className="shrink-0 border font-medium"
+                          style={getStatusStyle(theme.hex)}
+                        >
+                          {displayLabel}
+                        </Badge>
+                        {trip.startedAt && (
+                          <span className="shrink-0 text-xs text-muted-foreground">{formatDate(trip.startedAt)}</span>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </CardContent>
         </Card>
 
-        <Card className="card-hover lg:col-span-2">
+        <Card className="card-hover border border-border bg-card lg:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-foreground">
               <Clock className="h-5 w-5 text-primary" />
               Quick links
             </CardTitle>
@@ -389,54 +369,28 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Link to="/app/vehicles">
-                <div className="flex items-center gap-4 rounded-xl border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-md">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15">
-                    <Car className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">Vehicles</p>
-                    <p className="text-xs text-muted-foreground">Manage fleet</p>
-                  </div>
-                  <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground" />
-                </div>
-              </Link>
-              <Link to="/app/trips">
-                <div className="flex items-center gap-4 rounded-xl border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-md">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15">
-                    <ArrowRightLeft className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">Trips</p>
-                    <p className="text-xs text-muted-foreground">View all trips</p>
-                  </div>
-                  <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground" />
-                </div>
-              </Link>
-              <Link to="/app/centers">
-                <div className="flex items-center gap-4 rounded-xl border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-md">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15">
-                    <Building2 className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">Centers</p>
-                    <p className="text-xs text-muted-foreground">Queues & sites</p>
-                  </div>
-                  <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground" />
-                </div>
-              </Link>
-              <Link to="/app/settings">
-                <div className="flex items-center gap-4 rounded-xl border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-md">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-muted">
-                    <Activity className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">Settings</p>
-                    <p className="text-xs text-muted-foreground">Preferences</p>
-                  </div>
-                  <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground" />
-                </div>
-              </Link>
+              {[
+                { to: '/app/vehicles', label: 'Vehicles', sub: 'Manage fleet', icon: Car },
+                { to: '/app/trips', label: 'Trips', sub: 'View all trips', icon: ArrowRightLeft },
+                { to: '/app/centers', label: 'Centers', sub: 'Queues & sites', icon: Building2 },
+                { to: '/app/settings', label: 'Settings', sub: 'Preferences', icon: Activity },
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link key={item.to} to={item.to}>
+                    <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/40 hover:bg-primary/5">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15">
+                        <Icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-foreground">{item.label}</p>
+                        <p className="text-xs text-muted-foreground">{item.sub}</p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

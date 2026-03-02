@@ -21,7 +21,7 @@ export default function Users() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState('');
-  const [searchBy, setSearchBy] = useState('username,accid');
+  const [searchBy, setSearchBy] = useState('username');
   const [sortBy, setSortBy] = useState('lastLoginAt:DESC');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -90,7 +90,7 @@ export default function Users() {
       <Card>
         <CardHeader>
           <CardTitle>Search & Filter</CardTitle>
-          <CardDescription>Find users by username, account ID, or other fields</CardDescription>
+          <CardDescription>Find users by username or other fields</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
@@ -114,10 +114,9 @@ export default function Users() {
                 value={searchBy}
                 onChange={(e) => setSearchBy(e.target.value)}
               >
-                <option value="username,accid">Username & Account ID</option>
-                <option value="username">Username Only</option>
-                <option value="accid">Account ID Only</option>
-                <option value="subid">Sub ID Only</option>
+                <option value="username">Username</option>
+                <option value="fullname">Full name</option>
+                <option value="email">Email</option>
               </Select>
             </div>
             <div className="space-y-2">
@@ -131,8 +130,6 @@ export default function Users() {
                 <option value="lastLoginAt:ASC">Last Login (Oldest)</option>
                 <option value="username:ASC">Username A-Z</option>
                 <option value="username:DESC">Username Z-A</option>
-                <option value="accid:ASC">Account ID Asc</option>
-                <option value="accid:DESC">Account ID Desc</option>
               </Select>
             </div>
             <div className="space-y-2">
@@ -200,12 +197,6 @@ export default function Users() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>
-                        <SortButton field="accid">Account ID</SortButton>
-                      </TableHead>
-                      <TableHead>
-                        <SortButton field="subid">Sub ID</SortButton>
-                      </TableHead>
                       <TableHead>Fullname</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Company</TableHead>
@@ -216,10 +207,8 @@ export default function Users() {
                   </TableHeader>
                   <TableBody>
                     {usersData.data.map((user: any) => (
-                      <TableRow key={user.id || user.accid}>
-                        <TableCell className="font-medium">{user.accid || 'N/A'}</TableCell>
-                        <TableCell>{user.subid || 'N/A'}</TableCell>
-                        <TableCell>{user.fullname || user.fullName || 'N/A'}</TableCell>
+                      <TableRow key={user.id || user.accid || user.subid}>
+                        <TableCell className="font-medium">{user.fullname || user.fullName || 'N/A'}</TableCell>
                         <TableCell>{user.email ?? 'N/A'}</TableCell>
                         <TableCell>{user.company ?? 'N/A'}</TableCell>
                         <TableCell>

@@ -51,6 +51,21 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        /* Proof Arrive semantic (status, alerts) — use for badges and KPI accents */
+        status: {
+          success: "var(--color-success)",
+          error: "var(--color-error)",
+          warning: "var(--color-warning)",
+          info: "var(--color-info)",
+          transit: "var(--color-transit)",
+          muted: "var(--color-muted)",
+          waiting: "var(--color-status-waiting)",
+          loading: "var(--color-status-loading)",
+          available: "var(--color-status-available)",
+          "in-transit": "var(--color-status-in-transit)",
+          arrived: "var(--color-status-arrived)",
+          completed: "var(--color-status-completed)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

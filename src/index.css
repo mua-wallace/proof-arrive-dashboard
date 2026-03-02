@@ -2,50 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Proof Arrive theme — aligned with mobile app constants/theme.ts */
+
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222.2 47.4% 11.2%;
+    /* Tint (primary brand) — light */
+    --background: 204 100% 97%; /* #F0F9FF */
+    --foreground: 210 24% 9%; /* #11181C */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 47.4% 11.2%;
+    --card-foreground: 210 24% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 47.4% 11.2%;
-    --primary: 160 84% 39%; /* logistics emerald */
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 199 89% 48%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
+    --popover-foreground: 210 24% 9%;
+    --primary: 194 88% 34%; /* #0a7ea4 — tint */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 204 80% 96%;
+    --secondary-foreground: 210 24% 9%;
+    --muted: 204 80% 96%;
+    --muted-foreground: 210 9% 45%; /* #687076 — icon */
+    --accent: 194 88% 34%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 68% 50%; /* #D32F2F */
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 160 84% 39%;
+    --ring: 194 88% 34%;
     --radius: 0.625rem;
+
+    /* Proof Arrive semantic (for status badges, alerts) */
+    --color-success: #4CAF50;
+    --color-error: #FF5252;
+    --color-warning: #FF9800;
+    --color-info: #2196F3;
+    --color-transit: #9C27B0;
+    --color-muted: #9E9E9E;
+    --color-status-waiting: #FF9800;
+    --color-status-loading: #2196F3;
+    --color-status-unloading: #2196F3;
+    --color-status-available: #4CAF50;
+    --color-status-in-transit: #9C27B0;
+    --color-status-arrived: #4CAF50;
+    --color-status-completed: #9E9E9E;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --background: 222 47% 11%; /* #0F172A */
+    --foreground: 210 10% 93%; /* #ECEDEE */
+    --card: 222 47% 11%;
+    --card-foreground: 210 10% 93%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 10% 93%;
+    --primary: 199 91% 64%; /* #4FC3F7 — dark tint */
+    --primary-foreground: 210 24% 9%;
     --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary-foreground: 210 10% 93%;
     --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --muted-foreground: 210 6% 63%; /* #9BA1A6 */
+    --accent: 199 91% 64%;
+    --accent-foreground: 210 24% 9%;
+    --destructive: 0 63% 51%;
+    --destructive-foreground: 0 0% 100%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.9%;
+    --ring: 199 91% 64%;
   }
 }
 
@@ -58,17 +76,17 @@
   }
 }
 
-/* App shell: subtle gradient and content area */
+/* App shell: Proof Arrive background gradient */
 .app-shell {
-  background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(210 35% 96%) 50%, hsl(200 30% 97%) 100%);
+  background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(204 90% 96%) 50%, hsl(200 85% 97%) 100%);
 }
 .dark .app-shell {
-  background: linear-gradient(160deg, hsl(var(--background)) 0%, hsl(222 47% 6%) 100%);
+  background: linear-gradient(160deg, hsl(var(--background)) 0%, hsl(222 47% 8%) 100%);
 }
 
-/* Sidebar brand gradient */
+/* Sidebar brand — Proof Arrive tint */
 .sidebar-brand {
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(160 70% 32%) 100%);
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(194 75% 28%) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -86,6 +104,25 @@
 .glow-primary {
   box-shadow: 0 0 0 1px hsl(var(--primary) / 0.1), 0 4px 14px -4px hsl(var(--primary) / 0.2);
 }
+
+/* Proof Arrive semantic subtle backgrounds (for KPI cards, badges) */
+.bg-status-success\/15 { background-color: color-mix(in srgb, var(--color-success) 15%, transparent); }
+.bg-status-info\/15 { background-color: color-mix(in srgb, var(--color-info) 15%, transparent); }
+.bg-status-warning\/15 { background-color: color-mix(in srgb, var(--color-warning) 15%, transparent); }
+.bg-status-transit\/15 { background-color: color-mix(in srgb, var(--color-transit) 15%, transparent); }
+.bg-status-success\/10 { background-color: color-mix(in srgb, var(--color-success) 10%, transparent); }
+.bg-status-info\/10 { background-color: color-mix(in srgb, var(--color-info) 10%, transparent); }
+.bg-status-warning\/10 { background-color: color-mix(in srgb, var(--color-warning) 10%, transparent); }
+.bg-status-transit\/10 { background-color: color-mix(in srgb, var(--color-transit) 10%, transparent); }
+.border-status-success\/30 { border-color: color-mix(in srgb, var(--color-success) 30%, transparent); }
+.border-status-info\/30 { border-color: color-mix(in srgb, var(--color-info) 30%, transparent); }
+.border-status-warning\/30 { border-color: color-mix(in srgb, var(--color-warning) 30%, transparent); }
+.border-status-transit\/30 { border-color: color-mix(in srgb, var(--color-transit) 30%, transparent); }
+.text-status-success { color: var(--color-success); }
+.text-status-info { color: var(--color-info); }
+.text-status-warning { color: var(--color-warning); }
+.text-status-transit { color: var(--color-transit); }
+.bg-status-warning\/90 { background-color: color-mix(in srgb, var(--color-warning) 90%, transparent); }
 
 /* Landing page */
 .landing-bg {

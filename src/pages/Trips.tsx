@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 import { formatDate, formatNumber } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { getStatusTheme, getStatusStyle } from '@/lib/status-theme';
 
 export default function Trips() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -141,12 +142,9 @@ export default function Trips() {
         ? String(error)
         : null;
 
-  const getPhaseBadgeVariant = (phase: string | undefined): 'default' | 'secondary' | 'outline' => {
-    if (!phase) return 'secondary';
-    if (phase.includes('COMPLETED')) return 'default';
-    if (phase.includes('TRANSIT')) return 'secondary';
-    if (phase.includes('LOADING') || phase.includes('UNLOADING')) return 'outline';
-    return 'secondary';
+  const getPhaseDisplayLabel = (phase: string | undefined, status: string | undefined): string => {
+    const theme = getStatusTheme(phase ?? status);
+    return theme.label !== '—' ? theme.label : (phase != null ? String(phase).replace(/_/g, ' ') : (status ?? '—'));
   };
 
   return (
@@ -302,8 +300,12 @@ export default function Trips() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getPhaseBadgeVariant(trip.phase)}>
-                            {trip.phase != null ? String(trip.phase).replace(/_/g, ' ') : (trip.status ?? '—')}
+                          <Badge
+                            variant="secondary"
+                            className="border"
+                            style={getStatusStyle(getStatusTheme(trip.phase ?? trip.status).hex)}
+                          >
+                            {getPhaseDisplayLabel(trip.phase, trip.status)}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -405,7 +407,13 @@ export default function Trips() {
               </div>
               <div className="flex flex-wrap gap-2">
                 <Badge>{detailTrip.purpose ?? '—'}</Badge>
-                <Badge variant="secondary">{detailTrip.phase != null ? String(detailTrip.phase).replace(/_/g, ' ') : '—'}</Badge>
+                <Badge
+                  variant="secondary"
+                  className="border"
+                  style={getStatusStyle(getStatusTheme(detailTrip.phase ?? detailTrip.status).hex)}
+                >
+                  {getPhaseDisplayLabel(detailTrip.phase, detailTrip.status)}
+                </Badge>
                 {detailTrip.startedAt && (
                   <span className="text-sm text-muted-foreground flex items-center gap-1">
                     <Clock className="h-3 w-3" />
