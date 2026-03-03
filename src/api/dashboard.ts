@@ -222,8 +222,8 @@ export interface CenterQueueItem {
 }
 
 export interface CenterQueueSummary {
-  loading?: { total?: number; active?: number };
-  unloading?: { total?: number; active?: number };
+  loading?: number | { total?: number; active?: number };
+  unloading?: number | { total?: number; active?: number };
   [key: string]: unknown;
 }
 
@@ -535,7 +535,7 @@ export const dashboardApi = {
       return raw as PaginateResult<Trip>;
     }
     if (raw && typeof raw === 'object' && Array.isArray((raw as any).items)) {
-      const r = raw as { items: Trip[]; totalPages?: number; totalItems?: number; currentPage?: number };
+      const r = raw as unknown as { items: Trip[]; totalPages?: number; totalItems?: number; currentPage?: number };
       return {
         data: r.items,
         meta: {

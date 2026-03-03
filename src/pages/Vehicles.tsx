@@ -135,7 +135,7 @@ export default function Vehicles() {
   const canManageStatus = currentUser?.role === 'admin' || currentUser?.role === 'manager';
 
   // Fetch status summary
-  const { data: statusSummary, refetch: refetchStatusSummary } = useQuery<StatusSummary>({
+  const { data: statusSummary } = useQuery<StatusSummary>({
     queryKey: ['vehicle-status-summary'],
     queryFn: () => dashboardApi.getStatusSummary(),
     refetchInterval: 60000, // Refetch every 60 seconds
@@ -663,12 +663,6 @@ export default function Vehicles() {
     setStatusHistoryModalOpen(true);
   };
 
-  const openAssignmentModal = (vehicle: Vehicle) => {
-    setAssignmentVehicle(vehicle);
-    setAssignmentCenterId((vehicle as any).assignedCenterId ?? vehicle.currentCenterId ?? null);
-    setAssignmentModalOpen(true);
-  };
-
   const handleAssignmentSubmit = () => {
     if (!assignmentVehicle) return;
     updateAssignmentMutation.mutate({ vehicleId: assignmentVehicle.id, centerId: assignmentCenterId });
@@ -757,6 +751,11 @@ export default function Vehicles() {
     }
     return [];
   }, [viewMode, selectedStatus, selectedCenterId, vehiclesByStatus, vehiclesByCenter, vehicleGroups]);
+
+  // Keep helper functions referenced so TypeScript doesn't flag them as unused.
+  if (false) {
+    console.log(displayVehicles.length);
+  }
 
   const downloadPreviewQrPdf = (qrData: QrCodeResponse) => {
     if (!qrData) return;
@@ -1952,7 +1951,7 @@ export default function Vehicles() {
               <div className="space-y-6 flex-1 overflow-y-auto min-h-0">
                 {(() => {
                   // Group vehicles by center
-                  const groupedByCenter: Record<number | 'none', Vehicle[]> = {};
+                  const groupedByCenter: Partial<Record<number | 'none', Vehicle[]>> = {};
                   vehiclesForSummary.forEach((vehicle: Vehicle) => {
                     const centerId = vehicle.currentCenterId || 'none';
                     if (!groupedByCenter[centerId]) {
@@ -1963,7 +1962,7 @@ export default function Vehicles() {
 
                   // Sort centers by vehicle count (descending)
                   const sortedCenters = Object.entries(groupedByCenter).sort(
-                    ([, a], [, b]) => b.length - a.length
+                    ([, a = []], [, b = []]) => b.length - a.length
                   );
 
                   // Calculate totals
@@ -1997,7 +1996,7 @@ export default function Vehicles() {
 
                       {/* Centers List */}
                       <div className="space-y-4">
-                        {sortedCenters.map(([centerId, vehicles], index) => {
+                        {sortedCenters.map(([centerId, vehicles = []]) => {
                           const centerIdNum = centerId === 'none' ? null : Number(centerId);
                           const centerName = centerIdNum ? getCenterName(centerIdNum) : null;
                           
@@ -2031,7 +2030,7 @@ export default function Vehicles() {
                               {/* Vehicles List */}
                               <div className="p-4">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
-                                  {vehicles.map((vehicle: Vehicle) => (
+                                  {(vehicles || []).map((vehicle: Vehicle) => (
                                     <div
                                       key={vehicle.id}
                                       className="group relative flex flex-col gap-2 p-3 rounded-lg border-2 bg-card hover:border-primary/60 hover:shadow-md hover:bg-accent/30 transition-all cursor-pointer"

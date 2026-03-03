@@ -74,7 +74,7 @@ export default function Centers() {
     enabled: queueModalCenterId != null,
   });
 
-  const { data: queueSummary } = useQuery({
+  const { data: queueSummary } = useQuery<CenterQueueSummary>({
     queryKey: ['center-queue-summary', queueModalCenterId],
     queryFn: () => dashboardApi.getCenterQueueSummary(queueModalCenterId!),
     enabled: queueModalCenterId != null,
@@ -373,18 +373,28 @@ export default function Centers() {
               Unloading
             </Button>
           </div>
-          {queueSummary && (
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="rounded-lg border p-2">
-                <span className="text-muted-foreground">Loading (active)</span>
-                <p className="font-semibold">{queueSummary.loading?.active ?? queueSummary.loading ?? 0}</p>
+          {queueSummary && (() => {
+            const loadingActive =
+              typeof queueSummary.loading === 'number'
+                ? queueSummary.loading
+                : (queueSummary.loading?.active ?? queueSummary.loading?.total ?? 0);
+            const unloadingActive =
+              typeof queueSummary.unloading === 'number'
+                ? queueSummary.unloading
+                : (queueSummary.unloading?.active ?? queueSummary.unloading?.total ?? 0);
+            return (
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="rounded-lg border p-2">
+                  <span className="text-muted-foreground">Loading (active)</span>
+                  <p className="font-semibold">{loadingActive}</p>
+                </div>
+                <div className="rounded-lg border p-2">
+                  <span className="text-muted-foreground">Unloading (active)</span>
+                  <p className="font-semibold">{unloadingActive}</p>
+                </div>
               </div>
-              <div className="rounded-lg border p-2">
-                <span className="text-muted-foreground">Unloading (active)</span>
-                <p className="font-semibold">{queueSummary.unloading?.active ?? queueSummary.unloading ?? 0}</p>
-              </div>
-            </div>
-          )}
+            );
+          })()}
           <div className="flex-1 min-h-0 overflow-y-auto rounded-md border">
             {queueLoading ? (
               <div className="flex items-center justify-center py-12">

@@ -9,8 +9,6 @@ import {
   Building2,
   ArrowRightLeft,
   LogOut,
-  Package,
-  Truck,
   ChevronLeft,
   ChevronRight,
   Settings,
@@ -22,13 +20,6 @@ const mainNav = [
   { name: 'Trips', href: '/app/trips', icon: ArrowRightLeft },
   { name: 'Vehicles', href: '/app/vehicles', icon: Car },
   { name: 'Centers', href: '/app/centers', icon: Building2 },
-];
-
-const operationsNav = [
-  { name: 'Arrivals', href: '/app/arrivals', icon: LogOut },
-  { name: 'Exits', href: '/app/exits', icon: LogOut },
-  { name: 'Incoming Vehicles', href: '/app/incoming-vehicles', icon: Truck },
-  { name: 'Processing Stages', href: '/app/processing-stages', icon: Package },
 ];
 
 const otherNav = [{ name: 'Users', href: '/app/users', icon: Users }];

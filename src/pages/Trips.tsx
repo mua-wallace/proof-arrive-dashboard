@@ -42,7 +42,6 @@ import {
   Loader2,
   Eye,
   Clock,
-  Package,
   Building2,
 } from 'lucide-react';
 import { formatDate, formatNumber } from '@/lib/utils';
@@ -52,7 +51,7 @@ import { getStatusTheme, getStatusStyle } from '@/lib/status-theme';
 export default function Trips() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(() => parseInt(searchParams.get('page') || '1', 10));
-  const [limit, setLimit] = useState(20);
+  const limit = 20;
   const [status, setStatus] = useState<'ONGOING' | 'COMPLETED' | ''>(() => (searchParams.get('status') as 'ONGOING' | 'COMPLETED') || '');
   const [purpose, setPurpose] = useState<'DELIVERY' | 'PICKUP' | ''>(() => (searchParams.get('purpose') as 'DELIVERY' | 'PICKUP') || '');
   const [search, setSearch] = useState(() => searchParams.get('search') || '');
