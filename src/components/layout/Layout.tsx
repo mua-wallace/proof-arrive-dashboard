@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
+  CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -19,6 +20,7 @@ const mainNav = [
   { name: 'Dashboard', href: '/app', icon: LayoutDashboard },
   { name: 'Trips', href: '/app/trips', icon: ArrowRightLeft },
   { name: 'Vehicles', href: '/app/vehicles', icon: Car },
+  { name: 'Available vehicles', href: '/app/available-vehicles', icon: CheckCircle2 },
   { name: 'Centers', href: '/app/centers', icon: Building2 },
 ];
 

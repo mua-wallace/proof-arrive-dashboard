@@ -738,25 +738,6 @@ export default function Vehicles() {
     return '—';
   };
 
-  // Get all vehicles for display
-  const displayVehicles = useMemo(() => {
-    if (viewMode === 'status' && selectedStatus !== 'all' && vehiclesByStatus) {
-      return vehiclesByStatus;
-    }
-    if (viewMode === 'center' && selectedCenterId !== null && vehiclesByCenter) {
-      return vehiclesByCenter;
-    }
-    if (vehicleGroups) {
-      return vehicleGroups.flatMap((g: VehicleGroup) => g.vehicles);
-    }
-    return [];
-  }, [viewMode, selectedStatus, selectedCenterId, vehiclesByStatus, vehiclesByCenter, vehicleGroups]);
-
-  // Keep helper functions referenced so TypeScript doesn't flag them as unused.
-  if (false) {
-    console.log(displayVehicles.length);
-  }
-
   const downloadPreviewQrPdf = (qrData: QrCodeResponse) => {
     if (!qrData) return;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });

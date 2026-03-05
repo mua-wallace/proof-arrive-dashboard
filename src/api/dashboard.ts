@@ -194,18 +194,70 @@ export interface Trip {
 
 export interface TripsSummaryReport {
   ongoingCount?: number;
+  /** Trips started in the period */
+  startedInPeriod?: number;
+  /** Trips completed in the period */
   completedInPeriod?: number;
+  /** Completion rate 0–100 */
+  completionRatePercent?: number;
+  /** @deprecated use startedInPeriod */
   totalStarted?: number;
+  /** @deprecated use completionRatePercent */
   completionRate?: number;
   byStatus?: Record<string, number>;
   byPurpose?: Record<string, number>;
   byPhase?: Record<string, number>;
 }
 
+/** Response from GET /api/v1/reports/trips/by-date */
+export interface TripsByDateItem {
+  date: string;
+  startedCount?: number;
+  completedCount?: number;
+  count?: number;
+}
+
+/** Response from GET /api/v1/reports/trips/by-center */
+export interface TripsByCenterItem {
+  centerId: number;
+  centerName?: string;
+  tripsAsOrigin?: number;
+  tripsAsDestination?: number;
+  tripsCompletedAtDestination?: number;
+}
+
+/** Response from GET /api/v1/reports/trips/by-origin-destination */
+export interface TripsByOriginDestinationItem {
+  originCenterId: number;
+  destinationCenterId: number;
+  originCenterName?: string;
+  destinationCenterName?: string;
+  count: number;
+}
+
+/** Response from GET /api/v1/reports/trips/completion-rate */
+export interface TripsCompletionRateReport {
+  startedInPeriod: number;
+  completedInPeriod: number;
+  completionRatePercent: number;
+}
+
+/** Response from GET /api/v1/reports/queues/by-date */
+export interface QueuesByDateItem {
+  date: string;
+  loadingActive?: number;
+  unloadingActive?: number;
+}
+
 export interface QueuesSummaryReport {
   loading?: { active?: number; total?: number };
   unloading?: { active?: number; total?: number };
-  byCenter?: Array<{ centerId: number; centerName?: string; loading?: number; unloading?: number }>;
+  byCenter?: Array<{
+    centerId: number;
+    centerName?: string;
+    loading?: number | { total?: number; active?: number };
+    unloading?: number | { total?: number; active?: number };
+  }>;
 }
 
 export interface CenterQueueItem {
@@ -457,8 +509,39 @@ export const dashboardApi = {
     return response.data;
   },
 
-  getReportsTripsByDate: async (params?: ReportsQuery & { groupBy?: 'day' | 'week' | 'month' }): Promise<{ data: Array<{ date: string; count: number }> }> => {
-    const response = await apiClient.get('/reports/trips/by-date', { params });
+  getReportsTripsByDate: async (
+    params?: ReportsQuery & { groupBy?: 'day' | 'week' | 'month' }
+  ): Promise<{ data: TripsByDateItem[] } | TripsByDateItem[]> => {
+    const response = await apiClient.get<{ data: TripsByDateItem[] } | TripsByDateItem[]>('/reports/trips/by-date', {
+      params,
+    });
+    const raw = response.data;
+    if (Array.isArray(raw)) return raw;
+    return raw ?? { data: [] };
+  },
+
+  getReportsTripsByCenter: async (params?: ReportsQuery): Promise<TripsByCenterItem[] | { data: TripsByCenterItem[] }> => {
+    const response = await apiClient.get<TripsByCenterItem[] | { data: TripsByCenterItem[] }>('/reports/trips/by-center', {
+      params,
+    });
+    const raw = response.data;
+    if (Array.isArray(raw)) return raw;
+    return raw ?? { data: [] };
+  },
+
+  getReportsTripsByOriginDestination: async (
+    params?: ReportsQuery
+  ): Promise<TripsByOriginDestinationItem[] | { data: TripsByOriginDestinationItem[] }> => {
+    const response = await apiClient.get<
+      TripsByOriginDestinationItem[] | { data: TripsByOriginDestinationItem[] }
+    >('/reports/trips/by-origin-destination', { params });
+    const raw = response.data;
+    if (Array.isArray(raw)) return raw;
+    return raw ?? { data: [] };
+  },
+
+  getReportsTripsCompletionRate: async (params?: ReportsQuery): Promise<TripsCompletionRateReport> => {
+    const response = await apiClient.get<TripsCompletionRateReport>('/reports/trips/completion-rate', { params });
     return response.data;
   },
 
@@ -470,6 +553,18 @@ export const dashboardApi = {
   getReportsQueuesByCenter: async (params?: ReportsQuery): Promise<QueuesSummaryReport['byCenter']> => {
     const response = await apiClient.get('/reports/queues/by-center', { params });
     return response.data;
+  },
+
+  getReportsQueuesByDate: async (
+    params?: ReportsQuery
+  ): Promise<QueuesByDateItem[] | { data: QueuesByDateItem[] }> => {
+    const response = await apiClient.get<QueuesByDateItem[] | { data: QueuesByDateItem[] }>(
+      '/reports/queues/by-date',
+      { params }
+    );
+    const raw = response.data;
+    if (Array.isArray(raw)) return raw;
+    return raw ?? { data: [] };
   },
 
   // --- Trips ---
@@ -523,7 +618,11 @@ export const dashboardApi = {
     const cleaned = Object.fromEntries(
       Object.entries(requestParams).filter(([, v]) => v !== undefined && v !== null && v !== '')
     );
-    const response = await apiClient.get<PaginateResult<Trip>>('/trips', {
+    // Use a loose type here because different APIs can return:
+    // - direct array of trips
+    // - { data: Trip[], meta: {...} }
+    // - { items: Trip[], totalPages, totalItems, currentPage }
+    const response = await apiClient.get<any>('/trips', {
       params: cleaned,
     });
     const raw = response.data;

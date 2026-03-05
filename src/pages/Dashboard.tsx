@@ -1,5 +1,13 @@
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import {
+  startOfDay,
+  endOfDay,
+  subDays,
+  startOfMonth,
+  endOfMonth,
+} from 'date-fns';
 import {
   dashboardApi,
   normalizeStatusSummary,
@@ -8,10 +16,14 @@ import {
   type ReportsDashboard,
   type TripsSummaryReport,
   type QueuesSummaryReport,
+  type TripsByDateItem,
+  type QueuesByDateItem,
 } from '@/api/dashboard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import {
   Car,
   Building2,
@@ -25,13 +37,47 @@ import {
   CheckCircle2,
   ArrowRight,
   Sparkles,
+  Filter,
+  Calendar,
 } from 'lucide-react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 import { formatDate, formatNumber } from '@/lib/utils';
 import {
   TRIP_STATUS_THEME,
   getStatusTheme,
   getStatusStyle,
 } from '@/lib/status-theme';
+
+export type ReportDatePreset = 'today' | 'last7' | 'month';
+
+function getReportDateRange(preset: ReportDatePreset): { startDate: string; endDate: string } {
+  const now = new Date();
+  let start: Date;
+  let end: Date;
+  switch (preset) {
+    case 'last7':
+      start = startOfDay(subDays(now, 6));
+      end = endOfDay(now);
+      break;
+    case 'month':
+      start = startOfMonth(now);
+      end = endOfMonth(now);
+      break;
+    default:
+      start = startOfDay(now);
+      end = endOfDay(now);
+  }
+  return { startDate: start.toISOString(), endDate: end.toISOString() };
+}
 
 const VEHICLE_STATUS_KEYS = [
   'WAITING_IN_QUEUE',
@@ -71,13 +117,28 @@ function DashboardSkeleton() {
 }
 
 export default function Dashboard() {
+  const [datePreset, setDatePreset] = useState<ReportDatePreset>('today');
+  const [centerId, setCenterId] = useState<number | ''>('');
+  const [vehicleId, setVehicleId] = useState<number | ''>('');
+
+  const reportParams = useMemo(() => {
+    const { startDate, endDate } = getReportDateRange(datePreset);
+    const params: { startDate: string; endDate: string; centerId?: number; vehicleId?: number } = {
+      startDate,
+      endDate,
+    };
+    if (centerId !== '') params.centerId = centerId;
+    if (vehicleId !== '') params.vehicleId = vehicleId;
+    return params;
+  }, [datePreset, centerId, vehicleId]);
+
   const {
     data: reportsDashboard,
     isLoading: loadingReports,
     error: errorReports,
   } = useQuery<ReportsDashboard>({
-    queryKey: ['reports', 'dashboard'],
-    queryFn: () => dashboardApi.getReportsDashboard(),
+    queryKey: ['reports', 'dashboard', reportParams],
+    queryFn: () => dashboardApi.getReportsDashboard(reportParams),
     retry: 1,
     staleTime: 60 * 1000,
   });
@@ -103,16 +164,44 @@ export default function Dashboard() {
     staleTime: 2 * 60 * 1000,
   });
 
+  const { data: vehiclesData } = useQuery({
+    queryKey: ['vehicles', 'list', 'dashboard'],
+    queryFn: () => dashboardApi.getVehicles({ limit: 500 }),
+    retry: 1,
+    staleTime: 2 * 60 * 1000,
+  });
+
   const { data: tripsSummary } = useQuery<TripsSummaryReport>({
-    queryKey: ['reports', 'trips', 'summary'],
-    queryFn: () => dashboardApi.getReportsTripsSummary(),
+    queryKey: ['reports', 'trips', 'summary', reportParams],
+    queryFn: () => dashboardApi.getReportsTripsSummary(reportParams),
+    retry: 1,
+    staleTime: 60 * 1000,
+  });
+
+  const { data: completionRate } = useQuery({
+    queryKey: ['reports', 'trips', 'completion-rate', reportParams],
+    queryFn: () => dashboardApi.getReportsTripsCompletionRate(reportParams),
+    retry: 1,
+    staleTime: 60 * 1000,
+  });
+
+  const { data: tripsByDateRaw } = useQuery({
+    queryKey: ['reports', 'trips', 'by-date', reportParams],
+    queryFn: () => dashboardApi.getReportsTripsByDate({ ...reportParams, groupBy: datePreset === 'month' ? 'day' : 'day' }),
+    retry: 1,
+    staleTime: 60 * 1000,
+  });
+
+  const { data: queuesByDateRaw } = useQuery({
+    queryKey: ['reports', 'queues', 'by-date', reportParams],
+    queryFn: () => dashboardApi.getReportsQueuesByDate(reportParams),
     retry: 1,
     staleTime: 60 * 1000,
   });
 
   const { data: queuesSummary } = useQuery<QueuesSummaryReport>({
-    queryKey: ['reports', 'queues', 'summary'],
-    queryFn: () => dashboardApi.getReportsQueuesSummary(),
+    queryKey: ['reports', 'queues', 'summary', reportParams],
+    queryFn: () => dashboardApi.getReportsQueuesSummary(reportParams),
     retry: 1,
     staleTime: 30 * 1000,
   });
@@ -120,8 +209,28 @@ export default function Dashboard() {
   const normalizedStatus = normalizeStatusSummary(statusSummary);
   const activeTrips: Trip[] = tripsData?.data ?? [];
   const centers = centersData?.data ?? [];
+  const vehicles = vehiclesData?.data ?? [];
   const centerCount = Array.isArray(centers) ? centers.length : (reportsDashboard?.centers as number) ?? 0;
   const isLoading = loadingReports && loadingStatus;
+
+  const tripsByDate: TripsByDateItem[] = useMemo(() => {
+    const raw = tripsByDateRaw;
+    if (!raw) return [];
+    return Array.isArray(raw) ? raw : (raw as { data: TripsByDateItem[] }).data ?? [];
+  }, [tripsByDateRaw]);
+
+  const queuesByDate: QueuesByDateItem[] = useMemo(() => {
+    const raw = queuesByDateRaw;
+    if (!raw) return [];
+    return Array.isArray(raw) ? raw : (raw as { data: QueuesByDateItem[] }).data ?? [];
+  }, [queuesByDateRaw]);
+
+  const startedInPeriod = tripsSummary?.startedInPeriod ?? tripsSummary?.totalStarted ?? 0;
+  const completedInPeriod = tripsSummary?.completedInPeriod ?? 0;
+  const completionRatePercent =
+    completionRate?.completionRatePercent ??
+    tripsSummary?.completionRatePercent ??
+    (typeof tripsSummary?.completionRate === 'number' ? tripsSummary.completionRate : 0);
 
   if (isLoading) {
     return (
@@ -137,8 +246,6 @@ export default function Dashboard() {
 
   const totalVehicles = Object.values(normalizedStatus).reduce((a, b) => a + b, 0);
   const ongoingCount = tripsSummary?.ongoingCount ?? activeTrips.length ?? 0;
-  const completedCount = tripsSummary?.completedInPeriod ?? 0;
-  const completionRate = tripsSummary?.completionRate ?? 0;
   const loadingActive = queuesSummary?.loading?.active ?? (queuesSummary as any)?.loading ?? 0;
   const unloadingActive = queuesSummary?.unloading?.active ?? (queuesSummary as any)?.unloading ?? 0;
   const queueActive = Number(loadingActive) + Number(unloadingActive);
@@ -174,6 +281,68 @@ export default function Dashboard() {
         <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary-foreground/10" />
         <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-primary-foreground/5" />
       </header>
+
+      {/* Report filters — date range, center, vehicle */}
+      <Card className="border-border bg-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+            <Filter className="h-4 w-4 text-primary" />
+            Report filters
+          </CardTitle>
+          <CardDescription>
+            Trip and queue stats use the selected period and optional center/vehicle
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="report-date" className="flex items-center gap-1.5 text-sm">
+                <Calendar className="h-3.5 w-3.5" />
+                Period
+              </Label>
+              <Select
+                id="report-date"
+                value={datePreset}
+                onChange={(e) => setDatePreset(e.target.value as ReportDatePreset)}
+              >
+                <option value="today">Today</option>
+                <option value="last7">Last 7 days</option>
+                <option value="month">This month</option>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="report-center" className="text-sm">Center</Label>
+              <Select
+                id="report-center"
+                value={centerId === '' ? 'all' : String(centerId)}
+                onChange={(e) => setCenterId(e.target.value === 'all' ? '' : Number(e.target.value))}
+              >
+                <option value="all">All centers</option>
+                {(centers as { id: number; name?: string }[]).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name ?? `Center ${c.id}`}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="report-vehicle" className="text-sm">Vehicle</Label>
+              <Select
+                id="report-vehicle"
+                value={vehicleId === '' ? 'all' : String(vehicleId)}
+                onChange={(e) => setVehicleId(e.target.value === 'all' ? '' : Number(e.target.value))}
+              >
+                <option value="all">All vehicles</option>
+                {(vehicles as { id: number; plate?: string }[]).map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.plate ?? `Vehicle ${v.id}`}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Vehicle status — badge-style links, Proof Arrive status colors */}
       <section>
@@ -220,14 +389,12 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <Badge variant="secondary" className="mb-2 text-[10px] font-medium uppercase tracking-wider border-status-info/30 bg-status-info/10 text-status-info">
-                    Trips
+                    Trips (period)
                   </Badge>
-                  <p className="text-2xl font-bold text-foreground">{formatNumber(ongoingCount)}</p>
-                  {completedCount !== undefined && completedCount > 0 && (
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {formatNumber(completedCount)} completed in period
-                    </p>
-                  )}
+                  <p className="text-2xl font-bold text-foreground">{formatNumber(startedInPeriod)}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {formatNumber(completedInPeriod)} completed · {formatNumber(ongoingCount)} ongoing
+                  </p>
                 </div>
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-status-info/15">
                   <ArrowRightLeft className="h-6 w-6 text-status-info" />
@@ -242,10 +409,10 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <Badge variant="secondary" className="mb-2 text-[10px] font-medium uppercase tracking-wider border-status-success/30 bg-status-success/10 text-status-success">
-                  Completion
+                  Completion rate
                 </Badge>
                 <p className="text-2xl font-bold text-foreground">
-                  {typeof completionRate === 'number' ? `${completionRate.toFixed(1)}%` : '—'}
+                  {typeof completionRatePercent === 'number' ? `${completionRatePercent.toFixed(1)}%` : '—'}
                 </p>
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-status-success/15">
@@ -290,6 +457,108 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </section>
+
+      {/* Trips over time + Queues over time */}
+      {(tripsByDate.length > 0 || queuesByDate.length > 0) && (
+        <section className="grid gap-6 lg:grid-cols-2">
+          {tripsByDate.length > 0 && (
+            <Card className="border-border bg-card">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold text-foreground">Trips over time</CardTitle>
+                <CardDescription>Started and completed in the selected period</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={tripsByDate.map((d) => ({
+                        date: d.date.slice(0, 10),
+                        started: d.startedCount ?? d.count ?? 0,
+                        completed: d.completedCount ?? 0,
+                      }))}
+                      margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" />
+                      <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
+                      <Tooltip
+                        contentStyle={{ borderRadius: 8 }}
+                        labelFormatter={(v) => String(v)}
+                        formatter={(value: number) => [formatNumber(value), '']}
+                      />
+                      <Legend />
+                      <Area
+                        type="monotone"
+                        dataKey="started"
+                        name="Started"
+                        fill="var(--status-info)"
+                        stroke="var(--status-info)"
+                        fillOpacity={0.5}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="completed"
+                        name="Completed"
+                        fill="var(--status-success)"
+                        stroke="var(--status-success)"
+                        fillOpacity={0.5}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {queuesByDate.length > 0 && (
+            <Card className="border-border bg-card">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold text-foreground">Queue activity over time</CardTitle>
+                <CardDescription>Active loading and unloading in the selected period</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={queuesByDate.map((d) => ({
+                        date: d.date.slice(0, 10),
+                        loading: d.loadingActive ?? 0,
+                        unloading: d.unloadingActive ?? 0,
+                      }))}
+                      margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" />
+                      <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
+                      <Tooltip
+                        contentStyle={{ borderRadius: 8 }}
+                        labelFormatter={(v) => String(v)}
+                        formatter={(value: number) => [formatNumber(value), '']}
+                      />
+                      <Legend />
+                      <Area
+                        type="monotone"
+                        dataKey="loading"
+                        name="Loading active"
+                        fill="var(--status-warning)"
+                        stroke="var(--status-warning)"
+                        fillOpacity={0.6}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="unloading"
+                        name="Unloading active"
+                        fill="var(--status-transit)"
+                        stroke="var(--status-transit)"
+                        fillOpacity={0.6}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </section>
+      )}
 
       {/* Active trips + Quick links */}
       <div className="grid gap-6 lg:grid-cols-5">
