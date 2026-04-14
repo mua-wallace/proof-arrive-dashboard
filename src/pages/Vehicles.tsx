@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { dashboardApi, VehicleGroup, Vehicle, VehicleStatus, StatusSummary, StatusHistory, UpdateStatusRequest, BulkAssignmentItem } from '@/api/dashboard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -63,6 +64,7 @@ import { toast } from '@/lib/toast';
 import { QrCodeResponse, CurrentUser } from '@/api/dashboard';
 
 export default function Vehicles() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [qrSheetOpen, setQrSheetOpen] = useState(false);
@@ -109,10 +111,10 @@ export default function Vehicles() {
   // Handle vehicle groups error
   useEffect(() => {
     if (error) {
-      const message = (error as any)?.response?.data?.message || (error as Error)?.message || 'Failed to load vehicle groups';
-      toast.error('Error Loading Vehicles', message);
+      const message = (error as any)?.response?.data?.message || (error as Error)?.message || t('vehicles.loadError');
+      toast.error(t('vehicles.toast.errorLoadingVehicles'), message);
     }
-  }, [error]);
+  }, [error, t]);
 
   const {
     data: qrDetail,
@@ -187,11 +189,11 @@ export default function Vehicles() {
       setStatusUpdateModalOpen(false);
       setSelectedVehicleForStatus(null);
       setUpdateStatusForm({ status: 'available', centerId: undefined, notes: '' });
-      toast.success('Status Updated', 'Vehicle status has been updated successfully');
+      toast.success(t('vehicles.toast.statusUpdatedTitle'), t('vehicles.toast.statusUpdatedDesc'));
     },
     onError: (error: any) => {
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update vehicle status';
-      toast.error('Error Updating Status', errorMessage);
+      const errorMessage = error?.response?.data?.message || error?.message || t('vehicles.toast.errorUpdatingStatusDefault');
+      toast.error(t('vehicles.toast.errorUpdatingStatusTitle'), errorMessage);
     },
   });
 
@@ -202,14 +204,14 @@ export default function Vehicles() {
       queryClient.invalidateQueries({ queryKey: ['vehicle-qr', qrSheetThirdPartyId] });
       queryClient.invalidateQueries({ queryKey: ['vehicle-groups'] });
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      toast.success('Success', 'QR code regenerated successfully');
+      toast.success(t('vehicles.toast.qrRegeneratedTitle'), t('vehicles.toast.qrRegeneratedDesc'));
     },
     onError: (error: any) => {
-      const errorMessage = error?.response?.data?.message 
-        || error?.response?.data?.error 
-        || error?.message 
-        || 'Failed to regenerate QR code';
-      toast.error('Error Regenerating QR Code', errorMessage);
+      const errorMessage = error?.response?.data?.message
+        || error?.response?.data?.error
+        || error?.message
+        || t('vehicles.toast.errorRegeneratingQrDefault');
+      toast.error(t('vehicles.toast.errorRegeneratingQrTitle'), errorMessage);
     },
   });
 
@@ -225,11 +227,11 @@ export default function Vehicles() {
       setAssignmentModalOpen(false);
       setAssignmentVehicle(null);
       setAssignmentCenterId(null);
-      toast.success('Assignment Updated', 'Center assignment has been updated');
+      toast.success(t('vehicles.toast.assignmentUpdatedTitle'), t('vehicles.toast.assignmentUpdatedDesc'));
     },
     onError: (error: any) => {
-      const msg = error?.response?.data?.message || error?.message || 'Failed to update assignment';
-      toast.error('Error Updating Assignment', msg);
+      const msg = error?.response?.data?.message || error?.message || t('vehicles.toast.errorAssignmentDefault');
+      toast.error(t('vehicles.toast.errorAssignmentTitle'), msg);
     },
   });
 
@@ -246,24 +248,30 @@ export default function Vehicles() {
       setBulkAssignCenterId(null);
       const failed = data.results?.filter((r) => !r.success).length ?? 0;
       if (failed > 0) {
-        toast.error('Bulk Assign', `Updated ${data.updatedCount}; ${failed} failed.`);
+        toast.error(
+          t('vehicles.toast.bulkAssignTitle'),
+          t('vehicles.toast.bulkAssignPartialDesc', { updated: data.updatedCount, failed })
+        );
       } else {
-        toast.success('Bulk Assign', `Updated ${data.updatedCount} vehicle(s).`);
+        toast.success(
+          t('vehicles.toast.bulkAssignTitle'),
+          t('vehicles.toast.bulkAssignSuccessDesc', { count: data.updatedCount })
+        );
       }
     },
     onError: (error: any) => {
-      const msg = error?.response?.data?.message || error?.message || 'Failed to bulk assign';
-      toast.error('Error Bulk Assign', msg);
+      const msg = error?.response?.data?.message || error?.message || t('vehicles.toast.errorBulkAssignDefault');
+      toast.error(t('vehicles.toast.errorBulkAssignTitle'), msg);
     },
   });
 
   // Handle QR detail error
   useEffect(() => {
     if (qrDetailError) {
-      const message = (qrDetailError as any)?.response?.data?.message || (qrDetailError as Error)?.message || 'Failed to load QR code details';
-      toast.error('Error Loading QR Code', message);
+      const message = (qrDetailError as any)?.response?.data?.message || (qrDetailError as Error)?.message || t('vehicles.toast.errorLoadingQrDefault');
+      toast.error(t('vehicles.toast.errorLoadingQrTitle'), message);
     }
-  }, [qrDetailError]);
+  }, [qrDetailError, t]);
 
   const bulkCreateQrMutation = useMutation({
     mutationFn: (vehicleIds: number[]) => {
@@ -280,26 +288,26 @@ export default function Vehicles() {
       const failedCount = data?.failed ?? 0;
       
       if (failedCount > 0) {
-        const errorDetails = data?.errors 
+        const errorDetails = data?.errors
           ? ` Errors: ${data.errors.map(e => `Vehicle ${e.vehicleId}: ${e.error}`).join('; ')}`
           : '';
         toast.error(
-          'Partial Success',
-          `QR codes created for ${successCount} vehicle${successCount !== 1 ? 's' : ''}. ${failedCount} failed.${errorDetails}`
+          t('vehicles.toast.bulkQrPartialTitle'),
+          t('vehicles.toast.bulkQrPartialDesc', { success: successCount, failed: failedCount, errorDetails })
         );
       } else {
         toast.success(
-          'Success',
-          `QR codes created successfully for ${successCount} vehicle${successCount !== 1 ? 's' : ''}.`
+          t('vehicles.toast.bulkQrSuccessTitle'),
+          t('vehicles.toast.bulkQrSuccessDesc', { count: successCount })
         );
       }
     },
     onError: (error: any) => {
-      const errorMessage = error?.response?.data?.message 
-        || error?.response?.data?.error 
-        || error?.message 
-        || 'Failed to create QR codes';
-      toast.error('Error Creating QR Codes', errorMessage);
+      const errorMessage = error?.response?.data?.message
+        || error?.response?.data?.error
+        || error?.message
+        || t('vehicles.toast.errorBulkQrDefault');
+      toast.error(t('vehicles.toast.errorBulkQrTitle'), errorMessage);
     },
   });
 
@@ -569,7 +577,7 @@ export default function Vehicles() {
 
       doc.setFontSize(plateFontSize);
       doc.setTextColor(0, 0, 0);
-      const plate = vehicle.plate ?? 'N/A';
+      const plate = vehicle.plate ?? t('common.notAvailable');
       const maxPlateW = perPage === 1 ? pageW - 2 * margin : cellW - 4;
       doc.text(plate, plateX, plateY, { align: 'center', maxWidth: maxPlateW });
 
@@ -625,15 +633,7 @@ export default function Vehicles() {
   };
 
   const getStatusLabel = (status: VehicleStatus): string => {
-    const labels: Record<VehicleStatus, string> = {
-      available: 'Available',
-      in_garage: 'In Garage',
-      in_transit: 'In Transit',
-      in_processing: 'In Processing',
-      at_center: 'At Center',
-      unavailable: 'Unavailable',
-    };
-    return labels[status] || status;
+    return t(`vehicleStatus.${status}`, status);
   };
 
   const getStatusIcon = (status: VehicleStatus) => {
@@ -685,7 +685,7 @@ export default function Vehicles() {
     
     const requiresCenter = ['at_center', 'in_processing', 'in_garage'].includes(updateStatusForm.status);
     if (requiresCenter && !updateStatusForm.centerId) {
-      toast.error('Center Required', 'Please select a center for this status');
+      toast.error(t('vehicles.toast.centerRequiredTitle'), t('vehicles.toast.centerRequiredDesc'));
       return;
     }
 
@@ -793,17 +793,17 @@ export default function Vehicles() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <Car className="h-7 w-7 text-primary" />
-          Vehicles
+          {t('vehicles.title')}
         </h1>
         <p className="text-muted-foreground text-sm mt-0.5">
-          Search, filter, and manage your fleet. Click a status to see those vehicles.
+          {t('vehicles.subtitle')}
         </p>
       </div>
 
       {/* Status summary - click to filter */}
       {statusSummary && (
         <section>
-          <p className="text-sm font-medium text-muted-foreground mb-3">Fleet at a glance — click to view list</p>
+          <p className="text-sm font-medium text-muted-foreground mb-3">{t('vehicles.fleetAtAGlance')}</p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {(['available', 'in_garage', 'in_transit', 'in_processing', 'at_center', 'unavailable'] as VehicleStatus[]).map((status) => {
               const Icon = getStatusIcon(status);
@@ -849,15 +849,15 @@ export default function Vehicles() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               id="search"
-              placeholder="Search by plate or model..."
+              placeholder={t('vehicles.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 rounded-lg"
-              aria-label="Search vehicles"
+              aria-label={t('vehicles.searchAria')}
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground hidden sm:inline">View:</span>
+            <span className="text-sm text-muted-foreground hidden sm:inline">{t('vehicles.view')}</span>
             <div className="flex rounded-lg border bg-muted/50 p-0.5">
               <button
                 type="button"
@@ -867,7 +867,7 @@ export default function Vehicles() {
                   viewMode === 'groups' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
                 )}
               >
-                By group
+                {t('vehicles.viewByGroup')}
               </button>
               <button
                 type="button"
@@ -877,7 +877,7 @@ export default function Vehicles() {
                   viewMode === 'status' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
                 )}
               >
-                By status
+                {t('vehicles.viewByStatus')}
               </button>
               <button
                 type="button"
@@ -887,19 +887,19 @@ export default function Vehicles() {
                   viewMode === 'center' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
                 )}
               >
-                By center
+                {t('vehicles.viewByCenter')}
               </button>
             </div>
             {viewMode === 'status' && (
               <>
-                <Label htmlFor="status-filter" className="sr-only">Status</Label>
+                <Label htmlFor="status-filter" className="sr-only">{t('vehicles.statusView.columns.status')}</Label>
                 <Select
                   id="status-filter"
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value as VehicleStatus | 'all')}
                   className="h-9 w-[160px] rounded-lg"
                 >
-                  <option value="all">All statuses</option>
+                  <option value="all">{t('vehicles.allStatuses')}</option>
                   {(['available', 'in_garage', 'in_transit', 'in_processing', 'at_center', 'unavailable'] as VehicleStatus[]).map((s) => (
                     <option key={s} value={s}>{getStatusLabel(s)}</option>
                   ))}
@@ -908,14 +908,14 @@ export default function Vehicles() {
             )}
             {viewMode === 'center' && (
               <>
-                <Label htmlFor="center-filter" className="sr-only">Center</Label>
+                <Label htmlFor="center-filter" className="sr-only">{t('common.center')}</Label>
                 <Select
                   id="center-filter"
                   value={selectedCenterId ?? ''}
                   onChange={(e) => setSelectedCenterId(e.target.value ? Number(e.target.value) : null)}
                   className="h-9 w-[180px] rounded-lg"
                 >
-                  <option value="">Select center</option>
+                  <option value="">{t('vehicles.selectCenter')}</option>
                   {centersData?.data?.map((c: any) => (
                     <option key={c.id} value={c.id}>{c.name || `Center ${c.id}`}</option>
                   ))}
@@ -929,31 +929,31 @@ export default function Vehicles() {
       {/* Bulk actions - only when selection exists */}
       {totalSelected > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3">
-          <span className="text-sm font-medium text-primary">{totalSelected} selected</span>
+          <span className="text-sm font-medium text-primary">{t('vehicles.selected', { count: totalSelected })}</span>
           <Button variant="ghost" size="sm" onClick={() => setSelectedVehicles(new Set())} className="text-muted-foreground hover:text-foreground">
-            Clear selection
+            {t('vehicles.clearSelection')}
           </Button>
           <span className="text-muted-foreground/80">|</span>
           <div className="flex flex-wrap gap-2">
             {selectedVehiclesWithoutQr.length > 0 && selectedVehiclesWithQr.length === 0 && (
               <Button size="sm" onClick={handleBulkGenerateQr} disabled={bulkCreateQrMutation.isPending} className="gap-2">
                 {bulkCreateQrMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
-                Generate QR ({selectedVehiclesWithoutQr.length})
+                {t('vehicles.generateQr', { count: selectedVehiclesWithoutQr.length })}
               </Button>
             )}
             {selectedVehiclesWithQr.length > 0 && selectedVehiclesWithoutQr.length === 0 && (
               <>
-                <Label htmlFor="download-per-page" className="text-sm text-muted-foreground whitespace-nowrap self-center">Per page:</Label>
+                <Label htmlFor="download-per-page" className="text-sm text-muted-foreground whitespace-nowrap self-center">{t('vehicles.perPage')}</Label>
                 <Select id="download-per-page" value={String(downloadPerPage)} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDownloadPerPage(Number(e.target.value) as 1 | 2 | 3 | 4)} className="w-16 h-9 text-sm">
                   <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
                 </Select>
                 <Button size="sm" onClick={handleBulkDownloadQr} className="gap-2">
-                  <FileDown className="h-4 w-4" /> Download ({selectedVehiclesWithQr.length})
+                  <FileDown className="h-4 w-4" /> {t('vehicles.download', { count: selectedVehiclesWithQr.length })}
                 </Button>
               </>
             )}
             <Button variant="outline" size="sm" onClick={() => setBulkAssignModalOpen(true)} className="gap-2">
-              <Building2 className="h-4 w-4" /> Assign to center
+              <Building2 className="h-4 w-4" /> {t('vehicles.assignToCenter')}
             </Button>
           </div>
         </div>
@@ -962,21 +962,21 @@ export default function Vehicles() {
         <CardHeader className="pb-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle className="text-lg">Vehicle list</CardTitle>
+              <CardTitle className="text-lg">{t('vehicles.listTitle')}</CardTitle>
               <CardDescription>
-                {viewMode === 'groups' && vehicleGroups && `${vehicleGroups.length} groups, ${vehicleGroups.reduce((sum, g) => sum + g.total, 0)} vehicles`}
-                {viewMode === 'status' && (selectedStatus === 'all' ? 'Select a status above' : `${vehiclesByStatus?.length ?? 0} vehicles`)}
-                {viewMode === 'center' && (selectedCenterId == null ? 'Select a center above' : `${vehiclesByCenter?.length ?? 0} vehicles`)}
-                {totalSelected > 0 && <span className="text-primary font-medium"> · {totalSelected} selected</span>}
+                {viewMode === 'groups' && vehicleGroups && t('vehicles.groupsSummary', { groups: vehicleGroups.length, vehicles: vehicleGroups.reduce((sum, g) => sum + g.total, 0) })}
+                {viewMode === 'status' && (selectedStatus === 'all' ? t('vehicles.selectStatusAbove') : t('vehicles.vehiclesCount', { count: vehiclesByStatus?.length ?? 0 }))}
+                {viewMode === 'center' && (selectedCenterId == null ? t('vehicles.selectCenterAbove') : t('vehicles.vehiclesCount', { count: vehiclesByCenter?.length ?? 0 }))}
+                {totalSelected > 0 && <span className="text-primary font-medium">{t('vehicles.selectedSuffix', { count: totalSelected })}</span>}
               </CardDescription>
             </div>
             {viewMode === 'groups' && filteredGroups && filteredGroups.length > 0 && (
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" className="gap-1" onClick={() => setExpandedGroups(filteredGroups.map((g: VehicleGroup) => `group-${g.groupId}`))}>
-                  <ChevronDown className="h-4 w-4" /> Expand all
+                  <ChevronDown className="h-4 w-4" /> {t('vehicles.expandAll')}
                 </Button>
                 <Button variant="outline" size="sm" className="gap-1" onClick={() => setExpandedGroups([])}>
-                  <ChevronUp className="h-4 w-4" /> Collapse all
+                  <ChevronUp className="h-4 w-4" /> {t('vehicles.collapseAll')}
                 </Button>
               </div>
             )}
@@ -992,22 +992,22 @@ export default function Vehicles() {
           ) : error ? (
             <div className="text-center py-12">
               <Car className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-2">Failed to load vehicles</p>
+              <p className="text-muted-foreground mb-2">{t('vehicles.loadError')}</p>
               <p className="text-sm text-muted-foreground">
-                {error instanceof Error ? error.message : 'An error occurred while fetching vehicles'}
+                {error instanceof Error ? error.message : t('vehicles.fetchError')}
               </p>
               <Button
                 variant="outline"
                 className="mt-4"
                 onClick={() => window.location.reload()}
               >
-                Retry
+                {t('common.retry')}
               </Button>
             </div>
           ) : !filteredGroups || filteredGroups.length === 0 ? (
             <div className="text-center py-12">
               <Car className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No vehicles found</p>
+              <p className="text-muted-foreground">{t('vehicles.noVehicles')}</p>
             </div>
           ) : (
             <Accordion
@@ -1056,7 +1056,7 @@ export default function Vehicles() {
                         <div className="flex-1 text-left">
                           <span className="font-semibold">{group.groupName}</span>
                           <span className="ml-2 text-sm text-muted-foreground">
-                            ({group.total} {group.total === 1 ? 'vehicle' : 'vehicles'})
+                            ({t('vehicles.group', { count: group.total })})
                           </span>
                         </div>
                       </div>
@@ -1089,7 +1089,7 @@ export default function Vehicles() {
                                   <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                                     <div className="flex items-center gap-2">
                                       <span className="font-medium text-sm">
-                                        {vehicle.plate ?? 'N/A'}
+                                        {vehicle.plate ?? t('common.notAvailable')}
                                       </span>
                                       {vehicle.currentStatus && (
                                         <Badge
@@ -1109,7 +1109,7 @@ export default function Vehicles() {
                                       )}
                                     </div>
                                     <span className="text-muted-foreground text-xs">
-                                      {vehicle.model ?? 'N/A'}
+                                      {vehicle.model ?? t('common.notAvailable')}
                                     </span>
                                     {(() => {
                                       const centerLabel = getDisplayCenterName(vehicle);
@@ -1124,7 +1124,7 @@ export default function Vehicles() {
                                           )}
                                         >
                                           <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                                          <span>{hasCenter ? centerLabel : 'Not assigned'}</span>
+                                          <span>{hasCenter ? centerLabel : t('vehicles.notAssigned')}</span>
                                         </div>
                                       );
                                     })()}
@@ -1136,7 +1136,7 @@ export default function Vehicles() {
                                         alt={`QR Code for ${vehicle.plate ?? 'vehicle'}`}
                                         className="h-6 w-6 object-contain cursor-pointer hover:opacity-80 transition-opacity"
                                         onClick={() => vehicle.thirdPartyId && openQrSheet(vehicle.thirdPartyId)}
-                                        title="Click to view QR code details"
+                                        title={t('vehicles.viewQrDetails')}
                                       />
                                     </div>
                                   )}
@@ -1149,7 +1149,7 @@ export default function Vehicles() {
                                         onClick={() => vehicle.thirdPartyId && openQrSheet(vehicle.thirdPartyId)}
                                         className="h-6 px-2 text-xs"
                                       >
-                                        View
+                                        {t('common.view')}
                                       </Button>
                                     </div>
                                   )}
@@ -1178,8 +1178,8 @@ export default function Vehicles() {
               ) : selectedStatus === 'all' ? (
                 <div className="text-center py-12 rounded-lg border border-dashed bg-muted/30">
                   <Activity className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                  <p className="font-medium text-muted-foreground">Select a status above to see vehicles</p>
-                  <p className="text-sm text-muted-foreground mt-1">Or click a status card at the top</p>
+                  <p className="font-medium text-muted-foreground">{t('vehicles.statusView.selectTitle')}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{t('vehicles.statusView.selectHint')}</p>
                 </div>
               ) : vehiclesByStatus && vehiclesByStatus.length > 0 ? (
                 <div className="rounded-lg border overflow-hidden">
@@ -1193,14 +1193,14 @@ export default function Vehicles() {
                               if (checked) setSelectedVehicles(new Set(vehiclesByStatus.map((v) => v.thirdPartyId)));
                               else setSelectedVehicles(new Set());
                             }}
-                            aria-label="Select all"
+                            aria-label={t('vehicles.statusView.columns.actions')}
                           />
                         </TableHead>
-                        <TableHead>Plate</TableHead>
-                        <TableHead>Model</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Center</TableHead>
-                        <TableHead className="text-right w-32">Actions</TableHead>
+                        <TableHead>{t('vehicles.statusView.columns.plate')}</TableHead>
+                        <TableHead>{t('vehicles.statusView.columns.model')}</TableHead>
+                        <TableHead>{t('vehicles.statusView.columns.status')}</TableHead>
+                        <TableHead>{t('vehicles.statusView.columns.center')}</TableHead>
+                        <TableHead className="text-right w-32">{t('vehicles.statusView.columns.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1248,7 +1248,7 @@ export default function Vehicles() {
                                     )}
                                   >
                                     <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                                    {hasCenter ? centerLabel : 'Not assigned'}
+                                    {hasCenter ? centerLabel : t('vehicles.notAssigned')}
                                   </span>
                                 );
                               })()}
@@ -1256,11 +1256,11 @@ export default function Vehicles() {
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
                                 {qrCodeDataUrl ? (
-                                  <button type="button" onClick={() => vehicle.thirdPartyId && openQrSheet(vehicle.thirdPartyId)} className="p-2 rounded-md hover:bg-muted" title="View QR code">
+                                  <button type="button" onClick={() => vehicle.thirdPartyId && openQrSheet(vehicle.thirdPartyId)} className="p-2 rounded-md hover:bg-muted" title={t('vehicles.viewQr')}>
                                     <img src={qrCodeDataUrl} alt="QR" className="h-5 w-5 object-contain" />
                                   </button>
                                 ) : hasQr ? (
-                                  <Button variant="ghost" size="icon" className="h-8 w-8" title="View QR" onClick={() => vehicle.thirdPartyId && openQrSheet(vehicle.thirdPartyId)}>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" title={t('vehicles.viewQr')} onClick={() => vehicle.thirdPartyId && openQrSheet(vehicle.thirdPartyId)}>
                                     <QrCode className="h-4 w-4" />
                                   </Button>
                                 ) : null}
@@ -1275,7 +1275,7 @@ export default function Vehicles() {
               ) : (
                 <div className="text-center py-12 rounded-lg border border-dashed bg-muted/30">
                   <Car className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">No vehicles with this status</p>
+                  <p className="text-muted-foreground">{t('vehicles.statusView.empty')}</p>
                 </div>
               )}
             </>
@@ -1291,8 +1291,8 @@ export default function Vehicles() {
               ) : selectedCenterId == null ? (
                 <div className="text-center py-12 rounded-lg border border-dashed bg-muted/30">
                   <Building2 className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                  <p className="font-medium text-muted-foreground">Select a center above to see vehicles</p>
-                  <p className="text-sm text-muted-foreground mt-1">Use the center dropdown in the toolbar</p>
+                  <p className="font-medium text-muted-foreground">{t('vehicles.centerView.selectTitle')}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{t('vehicles.centerView.selectHint')}</p>
                 </div>
               ) : vehiclesByCenter && vehiclesByCenter.length > 0 ? (
                 <div className="rounded-lg border overflow-hidden">
@@ -1309,14 +1309,14 @@ export default function Vehicles() {
                                 setSelectedVehicles(new Set());
                               }
                             }}
-                            aria-label="Select all"
+                            aria-label={t('vehicles.statusView.columns.actions')}
                           />
                         </TableHead>
-                        <TableHead>Plate</TableHead>
-                        <TableHead>Model</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Center</TableHead>
-                        <TableHead className="text-right w-32">Actions</TableHead>
+                        <TableHead>{t('vehicles.statusView.columns.plate')}</TableHead>
+                        <TableHead>{t('vehicles.statusView.columns.model')}</TableHead>
+                        <TableHead>{t('vehicles.statusView.columns.status')}</TableHead>
+                        <TableHead>{t('vehicles.statusView.columns.center')}</TableHead>
+                        <TableHead className="text-right w-32">{t('vehicles.statusView.columns.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1364,7 +1364,7 @@ export default function Vehicles() {
                                     )}
                                   >
                                     <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                                    {hasCenter ? centerLabel : 'Not assigned'}
+                                    {hasCenter ? centerLabel : t('vehicles.notAssigned')}
                                   </span>
                                 );
                               })()}
@@ -1372,11 +1372,11 @@ export default function Vehicles() {
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
                                 {qrCodeDataUrl ? (
-                                  <button type="button" onClick={() => vehicle.thirdPartyId && openQrSheet(vehicle.thirdPartyId)} className="p-2 rounded-md hover:bg-muted" title="View QR code">
+                                  <button type="button" onClick={() => vehicle.thirdPartyId && openQrSheet(vehicle.thirdPartyId)} className="p-2 rounded-md hover:bg-muted" title={t('vehicles.viewQr')}>
                                     <img src={qrCodeDataUrl} alt="QR" className="h-5 w-5 object-contain" />
                                   </button>
                                 ) : hasQr ? (
-                                  <Button variant="ghost" size="icon" className="h-8 w-8" title="View QR" onClick={() => vehicle.thirdPartyId && openQrSheet(vehicle.thirdPartyId)}>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" title={t('vehicles.viewQr')} onClick={() => vehicle.thirdPartyId && openQrSheet(vehicle.thirdPartyId)}>
                                     <QrCode className="h-4 w-4" />
                                   </Button>
                                 ) : null}
@@ -1391,7 +1391,7 @@ export default function Vehicles() {
               ) : (
                 <div className="text-center py-12 rounded-lg border border-dashed bg-muted/30">
                   <Car className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">No vehicles at this center</p>
+                  <p className="text-muted-foreground">{t('vehicles.centerView.empty')}</p>
                 </div>
               )}
             </>
@@ -1421,7 +1421,7 @@ export default function Vehicles() {
             <div className="flex items-center justify-between border-b px-6 py-4">
               <h2 id="qr-sheet-title" className="text-lg font-semibold flex items-center gap-2">
                 <ScanLine className="h-5 w-5 text-primary" />
-                QR Code Details
+                {t('vehicles.qrSheet.title')}
               </h2>
               <div className="flex items-center gap-1">
                 {qrDetail && (
@@ -1430,13 +1430,13 @@ export default function Vehicles() {
                     size="sm"
                     onClick={downloadQrPdf}
                     className="gap-2 shadow-sm"
-                    aria-label="Download PDF"
+                    aria-label={t('vehicles.qrSheet.downloadPdf')}
                   >
                     <FileDown className="h-4 w-4" />
-                    Download PDF
+                    {t('vehicles.qrSheet.downloadPdf')}
                   </Button>
                 )}
-                <Button variant="ghost" size="icon" onClick={closeQrSheet} aria-label="Close">
+                <Button variant="ghost" size="icon" onClick={closeQrSheet} aria-label={t('common.close')}>
                   <X className="h-5 w-5" />
                 </Button>
               </div>
@@ -1445,13 +1445,13 @@ export default function Vehicles() {
               {qrDetailLoading ? (
                 <div className="flex flex-col items-center justify-center py-16">
                   <Loader2 className="h-10 w-10 animate-spin text-muted-foreground mb-4" />
-                  <p className="text-sm text-muted-foreground">Loading QR code…</p>
+                  <p className="text-sm text-muted-foreground">{t('vehicles.qrSheet.loading')}</p>
                 </div>
               ) : qrDetailError ? (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-2">Could not load QR code details.</p>
+                  <p className="text-muted-foreground mb-2">{t('vehicles.qrSheet.loadError')}</p>
                   <Button variant="outline" size="sm" onClick={closeQrSheet}>
-                    Close
+                    {t('common.close')}
                   </Button>
                 </div>
               ) : qrDetail ? (
@@ -1477,33 +1477,33 @@ export default function Vehicles() {
                   <div className="space-y-3">
                     <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                       <Car className="h-4 w-4" />
-                      Vehicle details
+                      {t('vehicles.qrSheet.vehicleDetails')}
                     </h3>
                     <dl className="grid gap-2 text-sm">
                       <div className="flex justify-between gap-4 py-2 border-b">
                         <dt className="text-muted-foreground flex items-center gap-2">
                           <Hash className="h-3.5 w-3.5" />
-                          Plate
+                          {t('vehicles.qrSheet.plate')}
                         </dt>
                         <dd className="font-medium">{qrDetail.vehicle?.plate ?? '—'}</dd>
                       </div>
                       <div className="flex justify-between gap-4 py-2 border-b">
                         <dt className="text-muted-foreground flex items-center gap-2">
                           <Tag className="h-3.5 w-3.5" />
-                          Model
+                          {t('vehicles.qrSheet.model')}
                         </dt>
                         <dd className="font-medium">{qrDetail.vehicle?.model ?? '—'}</dd>
                       </div>
                       <div className="flex justify-between gap-4 py-2 border-b">
-                        <dt className="text-muted-foreground flex items-center gap-2">Brand</dt>
+                        <dt className="text-muted-foreground flex items-center gap-2">{t('vehicles.qrSheet.brand')}</dt>
                         <dd className="font-medium">{qrDetail.vehicle?.brand ?? '—'}</dd>
                       </div>
                       <div className="flex justify-between gap-4 py-2 border-b">
-                        <dt className="text-muted-foreground flex items-center gap-2">Year</dt>
+                        <dt className="text-muted-foreground flex items-center gap-2">{t('vehicles.qrSheet.year')}</dt>
                         <dd className="font-medium">{qrDetail.vehicle?.year ?? '—'}</dd>
                       </div>
                       <div className="flex justify-between gap-4 py-2">
-                        <dt className="text-muted-foreground flex items-center gap-2">Tag</dt>
+                        <dt className="text-muted-foreground flex items-center gap-2">{t('vehicles.qrSheet.tag')}</dt>
                         <dd className="font-medium">{qrDetail.vehicle?.tag2 ?? '—'}</dd>
                       </div>
                     </dl>
@@ -1515,10 +1515,10 @@ export default function Vehicles() {
                         size="default"
                         onClick={() => setRegenerateDialogOpen(true)}
                         className="gap-2"
-                        aria-label="Regenerate QR Code"
+                        aria-label={t('vehicles.qrSheet.regenerate')}
                       >
                         <RotateCw className="h-4 w-4" />
-                        Regenerate QR Code
+                        {t('vehicles.qrSheet.regenerate')}
                       </Button>
                     </div>
                   )}
@@ -1533,19 +1533,19 @@ export default function Vehicles() {
       <Dialog open={regenerateDialogOpen} onOpenChange={setRegenerateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Regenerate QR Code</DialogTitle>
+            <DialogTitle>{t('vehicles.regenerateDialog.title')}</DialogTitle>
             <DialogDescription>
-              This action will regenerate (replace) the QR code for this vehicle. The existing QR code will be invalidated and cannot be used anymore.
+              {t('vehicles.regenerateDialog.description')}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground">
-              <strong>Consequences:</strong>
+              <strong>{t('vehicles.regenerateDialog.consequencesLabel')}</strong>
             </p>
             <ul className="list-disc list-inside text-sm text-muted-foreground mt-2 space-y-1">
-              <li>The current QR code will be permanently replaced</li>
-              <li>Any printed copies of the old QR code will no longer work</li>
-              <li>You will need to reprint and distribute the new QR code</li>
+              <li>{t('vehicles.regenerateDialog.consequence1')}</li>
+              <li>{t('vehicles.regenerateDialog.consequence2')}</li>
+              <li>{t('vehicles.regenerateDialog.consequence3')}</li>
             </ul>
           </div>
           <DialogFooter>
@@ -1553,7 +1553,7 @@ export default function Vehicles() {
               variant="outline"
               onClick={() => setRegenerateDialogOpen(false)}
             >
-              Cancel
+              {t('vehicles.regenerateDialog.cancel')}
             </Button>
             <Button
               variant="default"
@@ -1569,12 +1569,12 @@ export default function Vehicles() {
               {regenerateQrMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Regenerating...
+                  {t('vehicles.regenerateDialog.regenerating')}
                 </>
               ) : (
                 <>
                   <RotateCw className="h-4 w-4" />
-                  Confirm Regenerate
+                  {t('vehicles.regenerateDialog.confirm')}
                 </>
               )}
             </Button>
@@ -1586,14 +1586,14 @@ export default function Vehicles() {
       <Dialog open={statusUpdateModalOpen} onOpenChange={setStatusUpdateModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Update Vehicle Status</DialogTitle>
+            <DialogTitle>{t('vehicles.statusUpdate.title')}</DialogTitle>
             <DialogDescription>
-              Update the operational status for {selectedVehicleForStatus?.plate || 'this vehicle'}
+              {t('vehicles.statusUpdate.description', { plate: selectedVehicleForStatus?.plate || t('vehicles.statusUpdate.descriptionFallback') })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="status-select">Status</Label>
+              <Label htmlFor="status-select">{t('vehicles.statusUpdate.status')}</Label>
               <Select
                 id="status-select"
                 value={updateStatusForm.status}
@@ -1617,7 +1617,7 @@ export default function Vehicles() {
             {['at_center', 'in_processing', 'in_garage'].includes(updateStatusForm.status) && (
               <div className="space-y-2">
                 <Label htmlFor="center-select">
-                  Center <span className="text-destructive">*</span>
+                  {t('vehicles.statusUpdate.centerRequired')} <span className="text-destructive">*</span>
                 </Label>
                 <Select
                   id="center-select"
@@ -1629,7 +1629,7 @@ export default function Vehicles() {
                     }))
                   }
                 >
-                  <option value="">Select a center</option>
+                  <option value="">{t('vehicles.statusUpdate.selectCenter')}</option>
                   {centersData?.data?.map((center: any) => (
                     <option key={center.id} value={center.id}>
                       {center.name || `Center ${center.id}`}
@@ -1640,11 +1640,11 @@ export default function Vehicles() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="status-notes">Notes (Optional)</Label>
+              <Label htmlFor="status-notes">{t('vehicles.statusUpdate.notes')}</Label>
               <textarea
                 id="status-notes"
                 className="w-full min-h-[80px] px-3 py-2 text-sm border rounded-md resize-none"
-                placeholder="Add any notes about this status change..."
+                placeholder={t('vehicles.statusUpdate.notesPlaceholder')}
                 value={updateStatusForm.notes || ''}
                 onChange={(e) =>
                   setUpdateStatusForm((prev) => ({
@@ -1657,7 +1657,7 @@ export default function Vehicles() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setStatusUpdateModalOpen(false)}>
-              Cancel
+              {t('vehicles.statusUpdate.cancel')}
             </Button>
             <Button
               variant="default"
@@ -1668,12 +1668,12 @@ export default function Vehicles() {
               {updateStatusMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Updating...
+                  {t('vehicles.statusUpdate.updating')}
                 </>
               ) : (
                 <>
                   <Edit className="h-4 w-4" />
-                  Update Status
+                  {t('vehicles.statusUpdate.update')}
                 </>
               )}
             </Button>
@@ -1685,14 +1685,14 @@ export default function Vehicles() {
       <Dialog open={assignmentModalOpen} onOpenChange={setAssignmentModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Update center assignment</DialogTitle>
+            <DialogTitle>{t('vehicles.assignment.title')}</DialogTitle>
             <DialogDescription>
-              Assign {assignmentVehicle?.plate ?? 'this vehicle'} to a center, or remove assignment
+              {t('vehicles.assignment.description', { plate: assignmentVehicle?.plate ?? t('vehicles.assignment.descriptionFallback') })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="assignment-center">Center</Label>
+              <Label htmlFor="assignment-center">{t('vehicles.assignment.center')}</Label>
               <Select
                 id="assignment-center"
                 value={assignmentCenterId ?? ''}
@@ -1700,7 +1700,7 @@ export default function Vehicles() {
                   setAssignmentCenterId(e.target.value === '' ? null : Number(e.target.value))
                 }
               >
-                <option value="">None (remove assignment)</option>
+                <option value="">{t('vehicles.assignment.remove')}</option>
                 {centersData?.data?.map((center: any) => (
                   <option key={center.id} value={center.id}>
                     {center.name || `Center ${center.id}`}
@@ -1711,7 +1711,7 @@ export default function Vehicles() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAssignmentModalOpen(false)}>
-              Cancel
+              {t('vehicles.assignment.cancel')}
             </Button>
             <Button
               variant="default"
@@ -1722,10 +1722,10 @@ export default function Vehicles() {
               {updateAssignmentMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Updating...
+                  {t('vehicles.assignment.updating')}
                 </>
               ) : (
-                'Update assignment'
+                t('vehicles.assignment.update')
               )}
             </Button>
           </DialogFooter>
@@ -1736,14 +1736,14 @@ export default function Vehicles() {
       <Dialog open={bulkAssignModalOpen} onOpenChange={setBulkAssignModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Bulk assign to center</DialogTitle>
+            <DialogTitle>{t('vehicles.bulkAssign.title')}</DialogTitle>
             <DialogDescription>
-              Assign {totalSelected} selected vehicle(s) to a center
+              {t('vehicles.bulkAssign.description', { count: totalSelected })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="bulk-assign-center">Center</Label>
+              <Label htmlFor="bulk-assign-center">{t('vehicles.bulkAssign.center')}</Label>
               <Select
                 id="bulk-assign-center"
                 value={bulkAssignCenterId ?? ''}
@@ -1751,7 +1751,7 @@ export default function Vehicles() {
                   setBulkAssignCenterId(e.target.value === '' ? null : Number(e.target.value))
                 }
               >
-                <option value="">Select a center</option>
+                <option value="">{t('vehicles.statusUpdate.selectCenter')}</option>
                 {centersData?.data?.map((center: any) => (
                   <option key={center.id} value={center.id}>
                     {center.name || `Center ${center.id}`}
@@ -1762,7 +1762,7 @@ export default function Vehicles() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setBulkAssignModalOpen(false)}>
-              Cancel
+              {t('vehicles.bulkAssign.cancel')}
             </Button>
             <Button
               variant="default"
@@ -1773,12 +1773,12 @@ export default function Vehicles() {
               {bulkAssignMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Assigning...
+                  {t('vehicles.bulkAssign.assigning')}
                 </>
               ) : (
                 <>
                   <Building2 className="h-4 w-4" />
-                  Assign {totalSelected} vehicle(s)
+                  {t('vehicles.bulkAssign.assign', { count: totalSelected })}
                 </>
               )}
             </Button>
@@ -1790,16 +1790,16 @@ export default function Vehicles() {
       <Dialog open={statusHistoryModalOpen} onOpenChange={setStatusHistoryModalOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>Status History</DialogTitle>
+            <DialogTitle>{t('vehicles.history.title')}</DialogTitle>
             <DialogDescription>
-              Status change history for {selectedVehicleForStatus?.plate || 'this vehicle'}
+              {t('vehicles.history.description', { plate: selectedVehicleForStatus?.plate || t('vehicles.history.descriptionFallback') })}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             {statusHistoryLoading ? (
               <div className="flex flex-col items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
-                <p className="text-sm text-muted-foreground">Loading history...</p>
+                <p className="text-sm text-muted-foreground">{t('vehicles.history.loading')}</p>
               </div>
             ) : statusHistory && statusHistory.length > 0 ? (
               <div className="space-y-3 max-h-[60vh] overflow-y-auto">
@@ -1843,7 +1843,7 @@ export default function Vehicles() {
                       </div>
                       {entry.changedBy && (
                         <p className="text-xs text-muted-foreground mb-1">
-                          Changed by: {entry.changedBy}
+                          {t('vehicles.history.changedBy')} {entry.changedBy}
                         </p>
                       )}
                       {entry.notes && (
@@ -1856,13 +1856,13 @@ export default function Vehicles() {
             ) : (
               <div className="text-center py-8">
                 <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-sm text-muted-foreground">No status history available</p>
+                <p className="text-sm text-muted-foreground">{t('vehicles.history.empty')}</p>
               </div>
             )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setStatusHistoryModalOpen(false)}>
-              Close
+              {t('vehicles.history.close')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1915,7 +1915,7 @@ export default function Vehicles() {
                   )}
                 </h2>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Vehicles grouped by center location
+                  {t('vehicles.summary.subtitle')}
                 </p>
               </div>
             </div>
@@ -1926,7 +1926,7 @@ export default function Vehicles() {
             {vehiclesForSummaryLoading ? (
               <div className="flex flex-col items-center justify-center py-16">
                 <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-                <p className="text-sm text-muted-foreground">Loading vehicles...</p>
+                <p className="text-sm text-muted-foreground">{t('vehicles.summary.loading')}</p>
               </div>
             ) : vehiclesForSummary && vehiclesForSummary.length > 0 ? (
               <div className="space-y-6 flex-1 overflow-y-auto min-h-0">
@@ -1959,7 +1959,7 @@ export default function Vehicles() {
                             <Car className="h-5 w-5 text-primary" />
                           </div>
                           <div>
-                            <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Vehicles</p>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wide">{t('vehicles.summary.totalVehicles')}</p>
                             <p className="text-3xl font-bold">{totalVehicles}</p>
                           </div>
                         </div>
@@ -1969,7 +1969,7 @@ export default function Vehicles() {
                             <Building2 className="h-5 w-5 text-primary" />
                           </div>
                           <div>
-                            <p className="text-xs text-muted-foreground uppercase tracking-wide">Centers</p>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wide">{t('vehicles.summary.totalCenters')}</p>
                             <p className="text-3xl font-bold">{totalCenters}</p>
                           </div>
                         </div>
@@ -1995,10 +1995,10 @@ export default function Vehicles() {
                                     </div>
                                     <div>
                                       <h3 className="font-semibold text-base">
-                                        {centerName || (centerIdNum ? `Center ${centerIdNum}` : 'No Center Assigned')}
+                                        {centerName || (centerIdNum ? `Center ${centerIdNum}` : t('vehicles.summary.noCenterAssigned'))}
                                       </h3>
                                       <p className="text-xs text-muted-foreground">
-                                        {vehicles.length} {vehicles.length === 1 ? 'vehicle' : 'vehicles'}
+                                        {t('vehicles.summary.vehicleCount', { count: vehicles.length })}
                                       </p>
                                     </div>
                                   </div>
@@ -2026,7 +2026,7 @@ export default function Vehicles() {
                                       <div className="flex items-start justify-between gap-2">
                                         <div className="flex-1 min-w-0">
                                           <p className="font-bold text-base text-foreground truncate">
-                                            {vehicle.plate ?? 'N/A'}
+                                            {vehicle.plate ?? t('common.notAvailable')}
                                           </p>
                                         </div>
                                         {canManageStatus && (
@@ -2040,7 +2040,7 @@ export default function Vehicles() {
                                                 setStatusSummaryModalOpen(false);
                                                 openStatusUpdateModal(vehicle);
                                               }}
-                                              title="Update Status"
+                                              title={t('vehicles.summary.updateStatus')}
                                             >
                                               <Edit className="h-3.5 w-3.5" />
                                             </Button>
@@ -2053,7 +2053,7 @@ export default function Vehicles() {
                                                 setStatusSummaryModalOpen(false);
                                                 openStatusHistoryModal(vehicle);
                                               }}
-                                              title="View History"
+                                              title={t('vehicles.summary.viewHistory')}
                                             >
                                               <History className="h-3.5 w-3.5" />
                                             </Button>
@@ -2103,19 +2103,19 @@ export default function Vehicles() {
               <div className="text-center py-16">
                 <Car className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
                 <p className="text-base font-medium text-muted-foreground mb-1">
-                  No vehicles found
+                  {t('vehicles.summary.emptyTitle')}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  No vehicles have this status currently
+                  {t('vehicles.summary.emptyDesc')}
                 </p>
               </div>
             )}
           </div>
-          
+
               {/* Footer */}
               <div className="px-6 py-4 border-t bg-muted/30 shrink-0 flex justify-end">
                 <Button variant="outline" onClick={() => setStatusSummaryModalOpen(false)}>
-                  Close
+                  {t('vehicles.summary.close')}
                 </Button>
               </div>
             </div>
@@ -2144,9 +2144,9 @@ export default function Vehicles() {
             <div className="flex items-center justify-between border-b px-6 py-4">
               <h2 id="preview-modal-title" className="text-lg font-semibold flex items-center gap-2">
                 <Eye className="h-5 w-5 text-primary" />
-                Preview Generated QR Codes ({previewVehicleIds.length})
+                {t('vehicles.preview.title', { count: previewVehicleIds.length })}
               </h2>
-              <Button variant="ghost" size="icon" onClick={closePreviewModal} aria-label="Close">
+              <Button variant="ghost" size="icon" onClick={closePreviewModal} aria-label={t('common.close')}>
                 <X className="h-5 w-5" />
               </Button>
             </div>
@@ -2154,13 +2154,13 @@ export default function Vehicles() {
               {previewQrQueries.isLoading ? (
                 <div className="flex flex-col items-center justify-center py-16">
                   <Loader2 className="h-10 w-10 animate-spin text-muted-foreground mb-4" />
-                  <p className="text-sm text-muted-foreground">Loading QR codes…</p>
+                  <p className="text-sm text-muted-foreground">{t('vehicles.preview.loading')}</p>
                 </div>
               ) : previewQrQueries.error ? (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-2">Could not load QR codes.</p>
+                  <p className="text-muted-foreground mb-2">{t('vehicles.preview.loadError')}</p>
                   <Button variant="outline" size="sm" onClick={closePreviewModal}>
-                    Close
+                    {t('common.close')}
                   </Button>
                 </div>
               ) : previewQrQueries.data ? (
@@ -2210,7 +2210,7 @@ export default function Vehicles() {
                                 className="flex-1 gap-2 text-xs"
                               >
                                 <ScanLine className="h-3 w-3" />
-                                View
+                                {t('vehicles.preview.view')}
                               </Button>
                               <Button
                                 variant="outline"
@@ -2219,13 +2219,13 @@ export default function Vehicles() {
                                 className="flex-1 gap-2 text-xs"
                               >
                                 <Download className="h-3 w-3" />
-                                PDF
+                                {t('vehicles.preview.pdf')}
                               </Button>
                             </>
                           )}
                           {!qrData && item.error && (
                             <div className="flex-1 text-xs text-destructive text-center py-2">
-                              Failed to load
+                              {t('vehicles.preview.failed')}
                             </div>
                           )}
                         </div>
@@ -2237,7 +2237,7 @@ export default function Vehicles() {
             </div>
             <div className="flex items-center justify-end gap-2 border-t px-6 py-4">
               <Button variant="outline" onClick={closePreviewModal}>
-                Close
+                {t('vehicles.preview.close')}
               </Button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { useTranslation, Trans } from 'react-i18next';
 import { dashboardApi, type Vehicle, type BulkAssignmentItem } from '@/api/dashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +17,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Car, Building2, CheckCircle2, Loader2, Pencil } from 'lucide-react';
-import { formatNumber } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 
 /** Number of cards per row in the grid (used to align row heights by min count in row). */
@@ -31,6 +31,7 @@ function getCenterFromVehicle(v: Vehicle): { id: number; name: string } | null {
 }
 
 export default function AvailableVehicles() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   const { data: vehicles, isLoading, error } = useQuery({
@@ -63,12 +64,12 @@ export default function AvailableVehicles() {
       vehicles: vs,
     }));
     if (noCenter.length > 0) {
-      entries.push({ centerId: 0, centerName: 'No center / Unassigned', vehicles: noCenter });
+      entries.push({ centerId: 0, centerName: t('availableVehicles.noCenter'), vehicles: noCenter });
     }
     return entries.sort((a, b) =>
       a.centerId === 0 ? 1 : b.centerId === 0 ? -1 : a.centerName.localeCompare(b.centerName)
     );
-  }, [vehicles]);
+  }, [vehicles, t]);
 
   const unassignedGroup = byCenter.find((g) => g.centerId === 0);
   const assignedGroups = byCenter.filter((g) => g.centerId !== 0);
@@ -112,11 +113,14 @@ export default function AvailableVehicles() {
       const failed = result.results?.filter((r) => !r.success).length ?? 0;
       if (failed > 0) {
         toast.error(
-          'Partial assignment',
-          `Updated ${result.updatedCount}; ${failed} failed.`
+          t('availableVehicles.toast.partialTitle'),
+          t('availableVehicles.toast.partialDesc', { updated: result.updatedCount, failed })
         );
       } else {
-        toast.success('Assignment updated', `Updated ${result.updatedCount} vehicle(s).`);
+        toast.success(
+          t('availableVehicles.toast.updatedTitle'),
+          t('availableVehicles.toast.updatedDesc', { count: result.updatedCount })
+        );
       }
     },
     onError: (err: any) => {
@@ -124,8 +128,8 @@ export default function AvailableVehicles() {
         err?.response?.data?.message ||
         err?.response?.data?.error ||
         err?.message ||
-        'Failed to assign vehicles';
-      toast.error('Assignment failed', msg);
+        t('availableVehicles.toast.failedMsg');
+      toast.error(t('availableVehicles.toast.failedTitle'), msg);
     },
   });
 
@@ -160,11 +164,14 @@ export default function AvailableVehicles() {
       const failed = result.results?.filter((r) => !r.success).length ?? 0;
       if (failed > 0) {
         toast.error(
-          'Partial assignment',
-          `Updated ${result.updatedCount}; ${failed} failed.`
+          t('availableVehicles.toast.partialTitle'),
+          t('availableVehicles.toast.partialDesc', { updated: result.updatedCount, failed })
         );
       } else {
-        toast.success('Assignment updated', 'Vehicle center updated successfully.');
+        toast.success(
+          t('availableVehicles.toast.updatedTitle'),
+          t('availableVehicles.toast.updatedSingleDesc')
+        );
       }
     },
     onError: (err: any) => {
@@ -172,8 +179,8 @@ export default function AvailableVehicles() {
         err?.response?.data?.message ||
         err?.response?.data?.error ||
         err?.message ||
-        'Failed to update vehicle center';
-      toast.error('Update failed', msg);
+        t('availableVehicles.toast.updateFailedMsg');
+      toast.error(t('availableVehicles.toast.updateFailedTitle'), msg);
     },
   });
 
@@ -183,8 +190,8 @@ export default function AvailableVehicles() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Available vehicles</h1>
-          <p className="text-muted-foreground">Loading…</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('availableVehicles.title')}</h1>
+          <p className="text-muted-foreground">{t('availableVehicles.loading')}</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
@@ -204,9 +211,9 @@ export default function AvailableVehicles() {
               <CheckCircle2 className="h-6 w-6 text-status-success" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground">Available vehicles</h1>
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('availableVehicles.title')}</h1>
               <p className="text-muted-foreground">
-                Vehicles with status <strong>AVAILABLE</strong> and their respective centers
+                <Trans i18nKey="availableVehicles.subtitle" components={{ strong: <strong /> }} />
               </p>
             </div>
           </div>
@@ -219,11 +226,11 @@ export default function AvailableVehicles() {
                 className="gap-2"
                 onClick={() => setBulkAssignOpen(true)}
               >
-                No center / Unassigned ({formatNumber(unassignedGroup.vehicles.length)})
+                {t('availableVehicles.unassignedButton', { count: unassignedGroup.vehicles.length })}
               </Button>
             )}
             <Badge variant="secondary" className="text-base font-semibold">
-              {formatNumber(totalCount)} vehicle{totalCount !== 1 ? 's' : ''}
+              {t('availableVehicles.totalBadge', { count: totalCount })}
             </Badge>
           </div>
         </div>
@@ -233,7 +240,7 @@ export default function AvailableVehicles() {
         <Card className="border-status-warning/50 bg-status-warning/5">
           <CardContent className="py-4">
             <p className="text-sm text-foreground">
-              Could not load available vehicles. {(error as Error)?.message ?? String(error)}
+              {t('availableVehicles.loadErrorPrefix')} {(error as Error)?.message ?? String(error)}
             </p>
           </CardContent>
         </Card>
@@ -243,12 +250,12 @@ export default function AvailableVehicles() {
         <Card className="border-border">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Car className="h-12 w-12 text-muted-foreground" />
-            <p className="mt-4 font-medium text-foreground">No available vehicles</p>
+            <p className="mt-4 font-medium text-foreground">{t('availableVehicles.emptyTitle')}</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              There are no vehicles with status AVAILABLE at the moment.
+              {t('availableVehicles.emptyHint')}
             </p>
             <Link to="/app/vehicles" className="mt-4 text-sm font-medium text-primary hover:underline">
-              View all vehicles →
+              {t('availableVehicles.viewAllLink')}
             </Link>
           </CardContent>
         </Card>
@@ -257,7 +264,7 @@ export default function AvailableVehicles() {
       {assignedGroups.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-sm font-semibold text-muted-foreground">
-            Available by center
+            {t('availableVehicles.availableByCenter')}
           </h2>
           <div className="grid gap-3 items-start sm:grid-cols-2 lg:grid-cols-3">
             {assignedGroups.map(({ centerId, centerName, vehicles: vs }, index) => {
@@ -277,7 +284,7 @@ export default function AvailableVehicles() {
                       <span className="truncate">{centerName}</span>
                     </span>
                     <Badge variant="outline" className="text-[11px] font-medium">
-                      {formatNumber(vs.length)} vehicle{vs.length !== 1 ? 's' : ''}
+                      {t('availableVehicles.countBadge', { count: vs.length })}
                     </Badge>
                   </CardTitle>
                 </CardHeader>
@@ -301,7 +308,7 @@ export default function AvailableVehicles() {
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7 shrink-0 text-muted-foreground hover:text-primary"
-                              title="Update center assignment"
+                              title={t('availableVehicles.updateAssignment')}
                               onClick={() => {
                                 setReassignVehicle(v);
                                 const current =
@@ -331,12 +338,11 @@ export default function AvailableVehicles() {
                           }
                           className="font-medium text-primary hover:underline"
                         >
-                          Show less
+                          {t('availableVehicles.showLess')}
                         </button>
                       ) : (
                         <>
-                          + {formatNumber(vs.length - maxVisibleInRow)} more vehicle
-                          {vs.length - maxVisibleInRow !== 1 ? 's' : ''}
+                          {t('availableVehicles.moreVehicles', { count: vs.length - maxVisibleInRow })}
                           {' · '}
                           <button
                             type="button"
@@ -345,7 +351,7 @@ export default function AvailableVehicles() {
                             }
                             className="font-medium text-primary hover:underline"
                           >
-                            see more
+                            {t('availableVehicles.seeMore')}
                           </button>
                         </>
                       )}
@@ -372,9 +378,9 @@ export default function AvailableVehicles() {
           <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-card border-l border-border shadow-xl flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b">
               <div>
-                <h2 className="text-sm font-semibold text-foreground">Assign vehicles to center</h2>
+                <h2 className="text-sm font-semibold text-foreground">{t('availableVehicles.drawer.title')}</h2>
                 <p className="text-xs text-muted-foreground">
-                  Select one or more vehicles without a center and choose where to assign them.
+                  {t('availableVehicles.drawer.description')}
                 </p>
               </div>
               <Button
@@ -393,7 +399,7 @@ export default function AvailableVehicles() {
             </div>
             <div className="flex-1 min-h-0 flex flex-col px-5 py-4 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="drawer-assign-center">Center</Label>
+                <Label htmlFor="drawer-assign-center">{t('availableVehicles.drawer.center')}</Label>
                 <Select
                   id="drawer-assign-center"
                   value={assignCenterId === '' ? 'none' : String(assignCenterId)}
@@ -402,7 +408,7 @@ export default function AvailableVehicles() {
                   }
                   className="w-full"
                 >
-                  <option value="none">Select center…</option>
+                  <option value="none">{t('common.selectCenter')}</option>
                   {centers.map((c: any) => (
                     <option key={c.id} value={c.id}>
                       {c.name ?? `Center ${c.id}`}
@@ -411,11 +417,11 @@ export default function AvailableVehicles() {
                 </Select>
               </div>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Selected vehicles: {selectedUnassigned.size}</span>
+                <span>{t('availableVehicles.drawer.selectedCount', { count: selectedUnassigned.size })}</span>
                 {bulkAssignMutation.isPending && (
                   <span className="flex items-center gap-1">
                     <Loader2 className="h-3 w-3 animate-spin" />
-                    Assigning…
+                    {t('availableVehicles.drawer.assigning')}
                   </span>
                 )}
               </div>
@@ -457,7 +463,7 @@ export default function AvailableVehicles() {
                   setSelectedUnassigned(new Set());
                 }}
               >
-                Cancel
+                {t('availableVehicles.drawer.cancel')}
               </Button>
               <Button
                 type="button"
@@ -473,7 +479,7 @@ export default function AvailableVehicles() {
                 {bulkAssignMutation.isPending && (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 )}
-                Assign to center
+                {t('availableVehicles.drawer.assign')}
               </Button>
             </div>
           </div>
@@ -490,9 +496,9 @@ export default function AvailableVehicles() {
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Update vehicle center</DialogTitle>
+            <DialogTitle>{t('availableVehicles.reassignDialog.title')}</DialogTitle>
             <DialogDescription>
-              Choose a different center for this available vehicle. The current center is excluded.
+              {t('availableVehicles.reassignDialog.description')}
             </DialogDescription>
           </DialogHeader>
           {reassignVehicle && (
@@ -505,14 +511,14 @@ export default function AvailableVehicles() {
                   </span>
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Current center:{' '}
+                  {t('availableVehicles.reassignDialog.currentCenter')}{' '}
                   <span className="font-medium">
                     {getCenterFromVehicle(reassignVehicle)?.name ?? '—'}
                   </span>
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reassign-center">New center</Label>
+                <Label htmlFor="reassign-center">{t('availableVehicles.reassignDialog.newCenter')}</Label>
                 <Select
                   id="reassign-center"
                   value={reassignCenterId === '' ? 'none' : String(reassignCenterId)}
@@ -522,7 +528,7 @@ export default function AvailableVehicles() {
                     )
                   }
                 >
-                  <option value="none">Select center…</option>
+                  <option value="none">{t('common.selectCenter')}</option>
                   {centers
                     .filter((c: any) => {
                       const current =
@@ -547,7 +553,7 @@ export default function AvailableVehicles() {
                 setReassignCenterId('');
               }}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="button"
@@ -562,7 +568,7 @@ export default function AvailableVehicles() {
               className="gap-2"
             >
               {reassignMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              Update
+              {t('availableVehicles.reassignDialog.update')}
             </Button>
           </DialogFooter>
         </DialogContent>

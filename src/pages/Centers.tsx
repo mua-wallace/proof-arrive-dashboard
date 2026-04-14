@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, keepPreviousData, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import {
   dashboardApi,
   PaginateQuery,
@@ -33,6 +34,7 @@ import { formatNumber, formatDate } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 
 export default function Centers() {
+  const { t } = useTranslation();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState('');
@@ -86,10 +88,10 @@ export default function Centers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['center-queue', queueModalCenterId, queueType] });
       queryClient.invalidateQueries({ queryKey: ['center-queue-summary', queueModalCenterId] });
-      toast.success('Service started', 'Next vehicle in queue is now being served.');
+      toast.success(t('centers.toast.serviceStarted'), t('centers.toast.serviceStartedDesc'));
     },
     onError: (err: any) => {
-      toast.error('Error', err?.response?.data?.message || err?.message || 'Failed to start next service');
+      toast.error(t('centers.toast.error'), err?.response?.data?.message || err?.message || t('centers.toast.startFailed'));
     },
   });
 
@@ -125,27 +127,27 @@ export default function Centers() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
           <Building2 className="h-8 w-8" />
-          Centers
+          {t('centers.title')}
         </h1>
         <p className="text-muted-foreground">
-          View and manage centers (sites) in the system
+          {t('centers.subtitle')}
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Search & Filter</CardTitle>
-          <CardDescription>Find centers by name, geozone, manager, or group</CardDescription>
+          <CardTitle>{t('centers.filterTitle')}</CardTitle>
+          <CardDescription>{t('centers.filterDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
-              <Label htmlFor="search">Search</Label>
+              <Label htmlFor="search">{t('common.search')}</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="search"
-                  placeholder="Search centers..."
+                  placeholder={t('centers.searchPlaceholder')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-9"
@@ -153,35 +155,35 @@ export default function Centers() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="searchBy">Search Fields</Label>
+              <Label htmlFor="searchBy">{t('centers.searchFields')}</Label>
               <Select
                 id="searchBy"
                 value={searchBy}
                 onChange={(e) => setSearchBy(e.target.value)}
               >
-                <option value="name">Name</option>
-                <option value="geozone">Geozone</option>
-                <option value="manager">Manager</option>
-                <option value="groupname">Group</option>
-                <option value="name,geozone,manager">Name, Geozone & Manager</option>
+                <option value="name">{t('centers.searchBy.name')}</option>
+                <option value="geozone">{t('centers.searchBy.geozone')}</option>
+                <option value="manager">{t('centers.searchBy.manager')}</option>
+                <option value="groupname">{t('centers.searchBy.group')}</option>
+                <option value="name,geozone,manager">{t('centers.searchBy.combined')}</option>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sortBy">Sort By</Label>
+              <Label htmlFor="sortBy">{t('centers.sortBy')}</Label>
               <Select
                 id="sortBy"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
               >
-                <option value="name:ASC">Name A-Z</option>
-                <option value="name:DESC">Name Z-A</option>
-                <option value="geozone:ASC">Geozone A-Z</option>
-                <option value="manager:ASC">Manager A-Z</option>
-                <option value="groupname:ASC">Group A-Z</option>
+                <option value="name:ASC">{t('centers.sort.nameAsc')}</option>
+                <option value="name:DESC">{t('centers.sort.nameDesc')}</option>
+                <option value="geozone:ASC">{t('centers.sort.geozoneAsc')}</option>
+                <option value="manager:ASC">{t('centers.sort.managerAsc')}</option>
+                <option value="groupname:ASC">{t('centers.sort.groupAsc')}</option>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="limit">Items Per Page</Label>
+              <Label htmlFor="limit">{t('common.itemsPerPage')}</Label>
               <Select
                 id="limit"
                 value={limit}
@@ -204,11 +206,15 @@ export default function Centers() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Centers List</CardTitle>
+              <CardTitle>{t('centers.listTitle')}</CardTitle>
               <CardDescription>
                 {centersData && centersData.meta && centersData.meta.totalItems > 0
-                  ? `Showing ${(page - 1) * limit + 1} to ${Math.min(page * limit, centersData.meta.totalItems)} of ${formatNumber(centersData.meta.totalItems)} centers`
-                  : 'No centers found'}
+                  ? t('centers.listDescription', {
+                      from: (page - 1) * limit + 1,
+                      to: Math.min(page * limit, centersData.meta.totalItems),
+                      total: formatNumber(centersData.meta.totalItems),
+                    })
+                  : t('centers.emptyTitle')}
               </CardDescription>
             </div>
           </div>
@@ -221,22 +227,22 @@ export default function Centers() {
           ) : error ? (
             <div className="text-center py-12">
               <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-2">Failed to load centers</p>
+              <p className="text-muted-foreground mb-2">{t('centers.loadError')}</p>
               <p className="text-sm text-muted-foreground">
-                {error instanceof Error ? error.message : 'An error occurred while fetching centers'}
+                {error instanceof Error ? error.message : t('centers.fetchError')}
               </p>
               <Button
                 variant="outline"
                 className="mt-4"
                 onClick={() => window.location.reload()}
               >
-                Retry
+                {t('common.retry')}
               </Button>
             </div>
           ) : !centersData || !centersData.data || centersData.data.length === 0 ? (
             <div className="text-center py-12">
               <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No centers found</p>
+              <p className="text-muted-foreground">{t('centers.emptyTitle')}</p>
             </div>
           ) : (
             <>
@@ -245,29 +251,29 @@ export default function Centers() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>
-                        <SortButton field="name">Name</SortButton>
+                        <SortButton field="name">{t('centers.columns.name')}</SortButton>
                       </TableHead>
-                      <TableHead>Geozone</TableHead>
-                      <TableHead>Manager</TableHead>
-                      <TableHead>Group</TableHead>
-                      <TableHead>Time 1</TableHead>
-                      <TableHead>Time 2</TableHead>
-                      <TableHead>Break Start</TableHead>
-                      <TableHead>Break Stop</TableHead>
-                      <TableHead className="w-[100px]">Actions</TableHead>
+                      <TableHead>{t('centers.columns.geozone')}</TableHead>
+                      <TableHead>{t('centers.columns.manager')}</TableHead>
+                      <TableHead>{t('centers.columns.group')}</TableHead>
+                      <TableHead>{t('centers.columns.time1')}</TableHead>
+                      <TableHead>{t('centers.columns.time2')}</TableHead>
+                      <TableHead>{t('centers.columns.breakStart')}</TableHead>
+                      <TableHead>{t('centers.columns.breakStop')}</TableHead>
+                      <TableHead className="w-[100px]">{t('centers.columns.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {centersData.data.map((center: any) => (
                       <TableRow key={center.id}>
-                        <TableCell className="font-medium">{center.name ?? 'N/A'}</TableCell>
-                        <TableCell>{center.geozone ?? 'N/A'}</TableCell>
-                        <TableCell>{center.manager ?? 'N/A'}</TableCell>
-                        <TableCell>{center.groupname ?? 'N/A'}</TableCell>
-                        <TableCell>{center.time1 ?? 'N/A'}</TableCell>
-                        <TableCell>{center.time2 ?? 'N/A'}</TableCell>
-                        <TableCell>{center.breakstart ?? 'N/A'}</TableCell>
-                        <TableCell>{center.breakstop ?? 'N/A'}</TableCell>
+                        <TableCell className="font-medium">{center.name ?? t('common.notAvailable')}</TableCell>
+                        <TableCell>{center.geozone ?? t('common.notAvailable')}</TableCell>
+                        <TableCell>{center.manager ?? t('common.notAvailable')}</TableCell>
+                        <TableCell>{center.groupname ?? t('common.notAvailable')}</TableCell>
+                        <TableCell>{center.time1 ?? t('common.notAvailable')}</TableCell>
+                        <TableCell>{center.time2 ?? t('common.notAvailable')}</TableCell>
+                        <TableCell>{center.breakstart ?? t('common.notAvailable')}</TableCell>
+                        <TableCell>{center.breakstop ?? t('common.notAvailable')}</TableCell>
                         <TableCell>
                           <Button
                             variant="outline"
@@ -279,7 +285,7 @@ export default function Centers() {
                             }}
                           >
                             <ListOrdered className="h-3 w-3" />
-                            Queue
+                            {t('centers.queueButton')}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -291,7 +297,7 @@ export default function Centers() {
               {centersData.meta && centersData.meta.totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4">
                   <div className="text-sm text-muted-foreground">
-                    Page {centersData.meta.currentPage} of {centersData.meta.totalPages}
+                    {t('common.pageOf', { page: centersData.meta.currentPage, total: centersData.meta.totalPages })}
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -301,7 +307,7 @@ export default function Centers() {
                       disabled={page === 1}
                     >
                       <ChevronLeft className="h-4 w-4" />
-                      Previous
+                      {t('common.previous')}
                     </Button>
                     <div className="flex items-center gap-1">
                       {Array.from({ length: Math.min(5, centersData.meta.totalPages) }, (_, i) => {
@@ -334,7 +340,7 @@ export default function Centers() {
                       onClick={() => setPage((p) => Math.min(centersData.meta.totalPages, p + 1))}
                       disabled={page === centersData.meta.totalPages}
                     >
-                      Next
+                      {t('common.next')}
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
@@ -351,10 +357,10 @@ export default function Centers() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ListOrdered className="h-5 w-5" />
-              Queue — {centerName}
+              {t('centers.queueDialog.title', { center: centerName })}
             </DialogTitle>
             <DialogDescription>
-              View queue and start next service for loading or unloading
+              {t('centers.queueDialog.description')}
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-2 border-b pb-3">
@@ -363,14 +369,14 @@ export default function Centers() {
               size="sm"
               onClick={() => setQueueType('LOADING')}
             >
-              Loading
+              {t('centers.queueDialog.loading')}
             </Button>
             <Button
               variant={queueType === 'UNLOADING' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setQueueType('UNLOADING')}
             >
-              Unloading
+              {t('centers.queueDialog.unloading')}
             </Button>
           </div>
           {queueSummary && (() => {
@@ -385,11 +391,11 @@ export default function Centers() {
             return (
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="rounded-lg border p-2">
-                  <span className="text-muted-foreground">Loading (active)</span>
+                  <span className="text-muted-foreground">{t('centers.queueDialog.loadingActive')}</span>
                   <p className="font-semibold">{loadingActive}</p>
                 </div>
                 <div className="rounded-lg border p-2">
-                  <span className="text-muted-foreground">Unloading (active)</span>
+                  <span className="text-muted-foreground">{t('centers.queueDialog.unloadingActive')}</span>
                   <p className="font-semibold">{unloadingActive}</p>
                 </div>
               </div>
@@ -402,15 +408,15 @@ export default function Centers() {
               </div>
             ) : queueItems.length === 0 ? (
               <div className="py-12 text-center text-sm text-muted-foreground">
-                No active {queueType.toLowerCase()} queue entries
+                {queueType === 'LOADING' ? t('centers.queueDialog.emptyLoading') : t('centers.queueDialog.emptyUnloading')}
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Position</TableHead>
-                    <TableHead>Vehicle</TableHead>
-                    <TableHead>Queued at</TableHead>
+                    <TableHead>{t('centers.queueDialog.position')}</TableHead>
+                    <TableHead>{t('centers.queueDialog.vehicle')}</TableHead>
+                    <TableHead>{t('centers.queueDialog.queuedAt')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -441,10 +447,10 @@ export default function Centers() {
               ) : (
                 <Play className="h-4 w-4" />
               )}
-              Start next {queueType.toLowerCase()} service
+              {queueType === 'LOADING' ? t('centers.queueDialog.startNextLoading') : t('centers.queueDialog.startNextUnloading')}
             </Button>
             <Button variant="outline" onClick={() => setQueueModalCenterId(null)}>
-              Close
+              {t('common.close')}
             </Button>
           </DialogFooter>
         </DialogContent>

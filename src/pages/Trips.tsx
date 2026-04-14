@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import {
   dashboardApi,
   type Trip,
@@ -50,6 +51,7 @@ import { cn } from '@/lib/utils';
 import { getStatusTheme, getStatusStyle } from '@/lib/status-theme';
 
 export default function Trips() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(() => parseInt(searchParams.get('page') || '1', 10));
   const limit = 20;
@@ -196,10 +198,10 @@ export default function Trips() {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15">
             <ArrowRightLeft className="h-6 w-6 text-primary" />
           </div>
-          Trips
+          {t('trips.title')}
         </h1>
         <p className="mt-2 text-muted-foreground">
-          View and filter trips by status, purpose, and search
+          {t('trips.subtitle')}
         </p>
       </div>
 
@@ -207,14 +209,14 @@ export default function Trips() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
-            Filters
+            {t('trips.filters.title')}
           </CardTitle>
-          <CardDescription>Narrow down by status, purpose, or vehicle/center search</CardDescription>
+          <CardDescription>{t('trips.filters.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
+              <Label htmlFor="status">{t('trips.filters.status')}</Label>
               <Select
                 id="status"
                 value={status || 'all'}
@@ -224,13 +226,13 @@ export default function Trips() {
                   setPage(1);
                 }}
               >
-                <option value="all">All</option>
-                <option value="ONGOING">Ongoing</option>
-                <option value="COMPLETED">Completed</option>
+                <option value="all">{t('common.all')}</option>
+                <option value="ONGOING">{t('trips.status.ongoing')}</option>
+                <option value="COMPLETED">{t('trips.status.completed')}</option>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="purpose">Purpose</Label>
+              <Label htmlFor="purpose">{t('trips.filters.purpose')}</Label>
               <Select
                 id="purpose"
                 value={purpose || 'all'}
@@ -240,13 +242,13 @@ export default function Trips() {
                   setPage(1);
                 }}
               >
-                <option value="all">All</option>
-                <option value="DELIVERY">Delivery</option>
-                <option value="PICKUP">Pickup</option>
+                <option value="all">{t('common.all')}</option>
+                <option value="DELIVERY">{t('trips.purpose.delivery')}</option>
+                <option value="PICKUP">{t('trips.purpose.pickup')}</option>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="createdAt">Date (created)</Label>
+              <Label htmlFor="createdAt">{t('trips.filters.date')}</Label>
               <Input
                 id="createdAt"
                 type="date"
@@ -258,12 +260,12 @@ export default function Trips() {
               />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="search">Search</Label>
+              <Label htmlFor="search">{t('trips.filters.search')}</Label>
               <div className="relative">
                 <Truck className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="search"
-                  placeholder="Vehicle plate or center name..."
+                  placeholder={t('trips.filters.searchPlaceholder')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-9"
@@ -278,15 +280,19 @@ export default function Trips() {
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <CardTitle>{showUncompleted ? 'Uncompleted trips' : 'Trips list'}</CardTitle>
+              <CardTitle>{showUncompleted ? t('trips.uncompletedTitle') : t('trips.listTitle')}</CardTitle>
               <CardDescription>
                 {showUncompleted
                   ? meta
-                    ? `Showing ${formatNumber(trips.length)} trip${trips.length === 1 ? '' : 's'} started before today and still not completed`
-                    : 'Loading…'
+                    ? t('trips.uncompletedDescription', { count: trips.length })
+                    : t('common.loading')
                   : meta
-                    ? `Showing ${(page - 1) * limit + 1} to ${Math.min(page * limit, totalItems)} of ${formatNumber(totalItems)} trips`
-                    : 'Loading…'}
+                    ? t('trips.listDescription', {
+                        from: (page - 1) * limit + 1,
+                        to: Math.min(page * limit, totalItems),
+                        total: formatNumber(totalItems),
+                      })
+                    : t('common.loading')}
               </CardDescription>
             </div>
             {showUncompleted && (
@@ -296,7 +302,7 @@ export default function Trips() {
                 className="whitespace-nowrap"
                 onClick={() => setShowUncompleted(false)}
               >
-                Show all trips
+                {t('trips.showAll')}
               </Button>
             )}
           </div>
@@ -305,11 +311,11 @@ export default function Trips() {
           {apiErrorMessage ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <p className="font-medium text-destructive mb-1">
-                {showUncompleted ? 'Failed to load uncompleted trips' : 'Failed to load trips'}
+                {showUncompleted ? t('trips.loadErrorUncompleted') : t('trips.loadError')}
               </p>
               <p className="text-sm text-muted-foreground mb-4 max-w-md">{apiErrorMessage}</p>
               <Button variant="outline" onClick={() => activeRefetch()}>
-                Try again
+                {t('common.tryAgain')}
               </Button>
             </div>
           ) : activeLoading ? (
@@ -320,12 +326,10 @@ export default function Trips() {
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <ArrowRightLeft className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="font-medium text-muted-foreground">
-                {showUncompleted ? 'No uncompleted trips' : 'No trips found'}
+                {showUncompleted ? t('trips.emptyUncompleted') : t('trips.empty')}
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                {showUncompleted
-                  ? 'Every trip started before today has been completed'
-                  : 'Adjust filters or try another search'}
+                {showUncompleted ? t('trips.emptyUncompletedHint') : t('trips.emptyHint')}
               </p>
             </div>
           ) : (
@@ -334,13 +338,13 @@ export default function Trips() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Vehicle</TableHead>
-                      <TableHead>Origin</TableHead>
-                      <TableHead>Started</TableHead>
-                      <TableHead>Destination</TableHead>
-                      <TableHead>Purpose</TableHead>
-                      <TableHead>Phase / Status</TableHead>
-                      <TableHead className="w-[80px]">Actions</TableHead>
+                      <TableHead>{t('trips.columns.vehicle')}</TableHead>
+                      <TableHead>{t('trips.columns.origin')}</TableHead>
+                      <TableHead>{t('trips.columns.started')}</TableHead>
+                      <TableHead>{t('trips.columns.destination')}</TableHead>
+                      <TableHead>{t('trips.columns.purpose')}</TableHead>
+                      <TableHead>{t('trips.columns.phaseStatus')}</TableHead>
+                      <TableHead className="w-[80px]">{t('trips.columns.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -382,7 +386,7 @@ export default function Trips() {
                             onClick={() => setDetailTripId(trip.id)}
                           >
                             <Eye className="h-4 w-4" />
-                            View timeline
+                            {t('trips.viewTimeline')}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -394,7 +398,7 @@ export default function Trips() {
               {!showUncompleted && totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4">
                   <p className="text-sm text-muted-foreground">
-                    Page {page} of {totalPages}
+                    {t('common.pageOf', { page, total: totalPages })}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -404,7 +408,7 @@ export default function Trips() {
                       disabled={page === 1 || activeFetching}
                     >
                       <ChevronLeft className="h-4 w-4" />
-                      Previous
+                      {t('common.previous')}
                     </Button>
                     <Button
                       variant="outline"
@@ -412,7 +416,7 @@ export default function Trips() {
                       onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                       disabled={page === totalPages || activeFetching}
                     >
-                      Next
+                      {t('common.next')}
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
@@ -428,11 +432,11 @@ export default function Trips() {
         <DialogClose onClick={() => setDetailTripId(null)} />
         <DialogContent className="w-fit min-w-[20rem] max-w-[90vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Trip details</DialogTitle>
+            <DialogTitle>{t('trips.detail.title')}</DialogTitle>
             <DialogDescription>
               {detailTripId != null && (detailTrip
-                ? `${detailTrip.purpose ?? 'Trip'} · ${detailTrip.phase != null ? String(detailTrip.phase).replace(/_/g, ' ') : detailTrip.status ?? ''}`
-                : 'Loading…')}
+                ? `${detailTrip.purpose ?? t('trips.title')} · ${detailTrip.phase != null ? String(detailTrip.phase).replace(/_/g, ' ') : detailTrip.status ?? ''}`
+                : t('common.loading'))}
             </DialogDescription>
           </DialogHeader>
           {detailLoading ? (
@@ -441,30 +445,30 @@ export default function Trips() {
             </div>
           ) : detailError ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="text-sm text-destructive mb-2">Failed to load trip details</p>
+              <p className="text-sm text-destructive mb-2">{t('trips.detail.loadError')}</p>
               <Button variant="outline" size="sm" onClick={() => refetchDetail()}>
-                Try again
+                {t('common.tryAgain')}
               </Button>
             </div>
           ) : detailTrip ? (
             <div className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="rounded-lg border p-4">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Vehicle</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('trips.detail.vehicle')}</p>
                   <p className="font-semibold mt-1 flex items-center gap-2">
                     <Truck className="h-4 w-4" />
                     {detailTrip.vehicle?.plate ?? `#${detailTrip.vehicleId}`}
                   </p>
                 </div>
                 <div className="rounded-lg border p-4">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Origin</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('trips.detail.origin')}</p>
                   <p className="font-semibold mt-1 flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
                     {getCenterName(detailTrip.originCenterId)}
                   </p>
                 </div>
                 <div className="rounded-lg border p-4">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Destination</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('trips.detail.destination')}</p>
                   <p className="font-semibold mt-1 flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
                     {detailTrip.destinationCenterId != null ? getCenterName(detailTrip.destinationCenterId) : '—'}
@@ -483,7 +487,7 @@ export default function Trips() {
                 {detailTrip.startedAt && (
                   <span className="text-sm text-muted-foreground flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    Started {formatDate(detailTrip.startedAt)}
+                    {t('trips.detail.startedAt', { date: formatDate(detailTrip.startedAt) })}
                   </span>
                 )}
               </div>
@@ -491,7 +495,7 @@ export default function Trips() {
                 <div>
                   <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
-                    Trip timeline
+                    {t('trips.detail.timeline')}
                   </h4>
                   <ul className="space-y-2">
                     {[...(detailTrip.events || [])]
@@ -523,7 +527,7 @@ export default function Trips() {
           ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDetailTripId(null)}>
-              Close
+              {t('common.close')}
             </Button>
           </DialogFooter>
         </DialogContent>

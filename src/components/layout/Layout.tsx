@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores/auth.store';
 import { Button } from '@/components/ui/button';
 import { dashboardApi } from '@/api/dashboard';
+import LanguageSwitcher from '@/components/common/LanguageSwitcher';
 import {
   LayoutDashboard,
   Users,
@@ -19,17 +21,22 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const mainNav = [
-  { name: 'Dashboard', href: '/app', icon: LayoutDashboard },
-  { name: 'Trips', href: '/app/trips', icon: ArrowRightLeft },
-  { name: 'Vehicles', href: '/app/vehicles', icon: Car },
-  { name: 'Available vehicles', href: '/app/available-vehicles', icon: CheckCircle2 },
-  { name: 'Centers', href: '/app/centers', icon: Building2 },
+type NavItem = { key: string; labelKey: string; href: string; icon: typeof LayoutDashboard };
+
+const mainNav: NavItem[] = [
+  { key: 'dashboard', labelKey: 'nav.dashboard', href: '/app', icon: LayoutDashboard },
+  { key: 'trips', labelKey: 'nav.trips', href: '/app/trips', icon: ArrowRightLeft },
+  { key: 'vehicles', labelKey: 'nav.vehicles', href: '/app/vehicles', icon: Car },
+  { key: 'availableVehicles', labelKey: 'nav.availableVehicles', href: '/app/available-vehicles', icon: CheckCircle2 },
+  { key: 'centers', labelKey: 'nav.centers', href: '/app/centers', icon: Building2 },
 ];
 
-const otherNav = [{ name: 'Users', href: '/app/users', icon: Users }];
+const otherNav: NavItem[] = [
+  { key: 'users', labelKey: 'nav.users', href: '/app/users', icon: Users },
+];
 
 export default function Layout() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { user, clearAuth } = useAuthStore();
@@ -68,14 +75,15 @@ export default function Layout() {
     item,
     isActive,
   }: {
-    item: (typeof mainNav)[0];
+    item: NavItem;
     isActive: boolean;
   }) => {
     const Icon = item.icon;
+    const label = t(item.labelKey);
     return (
       <Link
         to={item.href}
-        title={isSidebarCollapsed ? item.name : undefined}
+        title={isSidebarCollapsed ? label : undefined}
         className={cn(
           'flex items-center rounded-xl text-sm font-medium transition-all duration-200',
           isSidebarCollapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5',
@@ -85,7 +93,7 @@ export default function Layout() {
         )}
       >
         <Icon className="h-5 w-5 flex-shrink-0" />
-        {!isSidebarCollapsed && <span>{item.name}</span>}
+        {!isSidebarCollapsed && <span>{label}</span>}
       </Link>
     );
   };
@@ -110,7 +118,7 @@ export default function Layout() {
                 <div>
                   <h1 className="text-lg font-bold tracking-tight sidebar-brand">Proof Arrive</h1>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                    Fleet & trips
+                    {t('brand.subtitle')}
                   </p>
                 </div>
               </div>
@@ -132,22 +140,22 @@ export default function Layout() {
           <nav className={cn('flex-1 overflow-y-auto', isSidebarCollapsed ? 'p-2' : 'p-3')}>
             {!isSidebarCollapsed && (
               <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Main
+                {t('nav.sectionMain')}
               </p>
             )}
             <div className="space-y-0.5">
               {mainNav.map((item) => (
-                <NavLink key={item.name} item={item} isActive={location.pathname === item.href} />
+                <NavLink key={item.key} item={item} isActive={location.pathname === item.href} />
               ))}
             </div>
             {!isSidebarCollapsed && (
               <>
                 <p className="mb-2 mt-5 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Other
+                  {t('nav.sectionOther')}
                 </p>
                 <div className="space-y-0.5">
                   {otherNav.map((item) => (
-                    <NavLink key={item.name} item={item} isActive={location.pathname === item.href} />
+                    <NavLink key={item.key} item={item} isActive={location.pathname === item.href} />
                   ))}
                 </div>
               </>
@@ -158,7 +166,7 @@ export default function Layout() {
           <div className={cn('border-t border-border/80', isSidebarCollapsed ? 'p-2' : 'p-3')}>
             <Link
               to="/app/settings"
-              title={isSidebarCollapsed ? 'Settings' : undefined}
+              title={isSidebarCollapsed ? t('nav.settings') : undefined}
               className={cn(
                 'flex items-center rounded-xl text-sm font-medium transition-all',
                 isSidebarCollapsed ? 'justify-center py-2.5' : 'gap-3 px-3 py-2.5',
@@ -168,12 +176,12 @@ export default function Layout() {
               )}
             >
               <Settings className="h-5 w-5 flex-shrink-0" />
-              {!isSidebarCollapsed && <span>Settings</span>}
+              {!isSidebarCollapsed && <span>{t('nav.settings')}</span>}
             </Link>
             {!isSidebarCollapsed && (
               <div className="mt-3 rounded-xl bg-muted/60 p-3">
                 <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  Signed in
+                  {t('nav.signedIn')}
                 </p>
                 <p className="mt-0.5 truncate text-sm font-medium capitalize">{displayRole}</p>
                 <Button
@@ -183,12 +191,12 @@ export default function Layout() {
                   onClick={handleLogout}
                 >
                   <LogOut className="h-3.5 w-3.5" />
-                  Logout
+                  {t('nav.logout')}
                 </Button>
               </div>
             )}
             {isSidebarCollapsed && (
-              <Button variant="outline" size="icon" className="mt-2 w-full" onClick={handleLogout} title="Logout">
+              <Button variant="outline" size="icon" className="mt-2 w-full" onClick={handleLogout} title={t('nav.logout')}>
                 <LogOut className="h-4 w-4" />
               </Button>
             )}
@@ -197,16 +205,17 @@ export default function Layout() {
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto">
-          <header className="sticky top-0 z-20 flex h-16 items-center justify-end border-b border-border/80 bg-background/80 px-4 backdrop-blur-xl sm:px-6">
+          <header className="sticky top-0 z-20 flex h-16 items-center justify-end gap-3 border-b border-border/80 bg-background/80 px-4 backdrop-blur-xl sm:px-6">
+            <LanguageSwitcher />
             <button
               type="button"
               onClick={handleBellClick}
               title={
                 pendingCount > 0
-                  ? `${pendingCount} uncompleted trip${pendingCount === 1 ? '' : 's'}`
-                  : 'No uncompleted trips'
+                  ? t('common.uncompletedTripsCount', { count: pendingCount })
+                  : t('common.noUncompleted')
               }
-              aria-label="Uncompleted trips"
+              aria-label={t('trips.uncompletedTitle')}
               className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <Bell className="h-5 w-5" />

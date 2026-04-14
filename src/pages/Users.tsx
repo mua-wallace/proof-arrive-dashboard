@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { dashboardApi, PaginateQuery, PaginateResult } from '@/api/dashboard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import { Users as UsersIcon, Search, ChevronLeft, ChevronRight, ArrowUpDown, Loa
 import { formatDate, formatNumber } from '@/lib/utils';
 
 export default function Users() {
+  const { t } = useTranslation();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState('');
@@ -79,28 +81,28 @@ export default function Users() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
           <UsersIcon className="h-8 w-8" />
-          Users
+          {t('users.title')}
         </h1>
         <p className="text-muted-foreground">
-          View and manage all registered users in the system
+          {t('users.subtitle')}
         </p>
       </div>
 
       {/* Filters and Search */}
       <Card>
         <CardHeader>
-          <CardTitle>Search & Filter</CardTitle>
-          <CardDescription>Find users by username or other fields</CardDescription>
+          <CardTitle>{t('users.filterTitle')}</CardTitle>
+          <CardDescription>{t('users.filterDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
-              <Label htmlFor="search">Search</Label>
+              <Label htmlFor="search">{t('common.search')}</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="search"
-                  placeholder="Search users..."
+                  placeholder={t('users.searchPlaceholder')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-9"
@@ -108,32 +110,32 @@ export default function Users() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="searchBy">Search Fields</Label>
+              <Label htmlFor="searchBy">{t('users.searchFields')}</Label>
               <Select
                 id="searchBy"
                 value={searchBy}
                 onChange={(e) => setSearchBy(e.target.value)}
               >
-                <option value="username">Username</option>
-                <option value="fullname">Full name</option>
-                <option value="email">Email</option>
+                <option value="username">{t('users.searchByUsername')}</option>
+                <option value="fullname">{t('users.searchByFullname')}</option>
+                <option value="email">{t('users.searchByEmail')}</option>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sortBy">Sort By</Label>
+              <Label htmlFor="sortBy">{t('users.sortBy')}</Label>
               <Select
                 id="sortBy"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
               >
-                <option value="lastLoginAt:DESC">Last Login (Recent)</option>
-                <option value="lastLoginAt:ASC">Last Login (Oldest)</option>
-                <option value="username:ASC">Username A-Z</option>
-                <option value="username:DESC">Username Z-A</option>
+                <option value="lastLoginAt:DESC">{t('users.sort.lastLoginDesc')}</option>
+                <option value="lastLoginAt:ASC">{t('users.sort.lastLoginAsc')}</option>
+                <option value="username:ASC">{t('users.sort.usernameAsc')}</option>
+                <option value="username:DESC">{t('users.sort.usernameDesc')}</option>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="limit">Items Per Page</Label>
+              <Label htmlFor="limit">{t('common.itemsPerPage')}</Label>
               <Select
                 id="limit"
                 value={limit}
@@ -157,11 +159,15 @@ export default function Users() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Users List</CardTitle>
+              <CardTitle>{t('users.listTitle')}</CardTitle>
               <CardDescription>
                 {usersData && usersData.meta && usersData.meta.totalItems > 0
-                  ? `Showing ${(page - 1) * limit + 1} to ${Math.min(page * limit, usersData.meta.totalItems)} of ${formatNumber(usersData.meta.totalItems)} users`
-                  : 'No users found'}
+                  ? t('users.listDescription', {
+                      from: (page - 1) * limit + 1,
+                      to: Math.min(page * limit, usersData.meta.totalItems),
+                      total: formatNumber(usersData.meta.totalItems),
+                    })
+                  : t('users.emptyTitle')}
               </CardDescription>
             </div>
           </div>
@@ -174,22 +180,22 @@ export default function Users() {
           ) : error ? (
             <div className="text-center py-12">
               <UsersIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-2">Failed to load users</p>
+              <p className="text-muted-foreground mb-2">{t('users.loadError')}</p>
               <p className="text-sm text-muted-foreground">
-                {error instanceof Error ? error.message : 'An error occurred while fetching users'}
+                {error instanceof Error ? error.message : t('users.fetchError')}
               </p>
               <Button
                 variant="outline"
                 className="mt-4"
                 onClick={() => window.location.reload()}
               >
-                Retry
+                {t('common.retry')}
               </Button>
             </div>
           ) : !usersData || !usersData.data || usersData.data.length === 0 ? (
             <div className="text-center py-12">
               <UsersIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No users found</p>
+              <p className="text-muted-foreground">{t('users.emptyTitle')}</p>
             </div>
           ) : (
             <>
@@ -197,22 +203,22 @@ export default function Users() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Fullname</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Company</TableHead>
+                      <TableHead>{t('users.columns.fullname')}</TableHead>
+                      <TableHead>{t('users.columns.email')}</TableHead>
+                      <TableHead>{t('users.columns.company')}</TableHead>
                       <TableHead>
-                        <SortButton field="lastLoginAt">Last Login</SortButton>
+                        <SortButton field="lastLoginAt">{t('users.columns.lastLogin')}</SortButton>
                       </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {usersData.data.map((user: any) => (
                       <TableRow key={user.id || user.accid || user.subid}>
-                        <TableCell className="font-medium">{user.fullname || user.fullName || 'N/A'}</TableCell>
-                        <TableCell>{user.email ?? 'N/A'}</TableCell>
-                        <TableCell>{user.company ?? 'N/A'}</TableCell>
+                        <TableCell className="font-medium">{user.fullname || user.fullName || t('common.notAvailable')}</TableCell>
+                        <TableCell>{user.email ?? t('common.notAvailable')}</TableCell>
+                        <TableCell>{user.company ?? t('common.notAvailable')}</TableCell>
                         <TableCell>
-                          {user.lastLoginAt ? formatDate(user.lastLoginAt) : 'N/A'}
+                          {user.lastLoginAt ? formatDate(user.lastLoginAt) : t('common.notAvailable')}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -224,7 +230,7 @@ export default function Users() {
               {usersData.meta && usersData.meta.totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4">
                   <div className="text-sm text-muted-foreground">
-                    Page {usersData.meta.currentPage} of {usersData.meta.totalPages}
+                    {t('common.pageOf', { page: usersData.meta.currentPage, total: usersData.meta.totalPages })}
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -234,7 +240,7 @@ export default function Users() {
                       disabled={page === 1}
                     >
                       <ChevronLeft className="h-4 w-4" />
-                      Previous
+                      {t('common.previous')}
                     </Button>
                     <div className="flex items-center gap-1">
                       {Array.from({ length: Math.min(5, usersData.meta.totalPages) }, (_, i) => {
@@ -267,7 +273,7 @@ export default function Users() {
                       onClick={() => setPage((p) => Math.min(usersData.meta.totalPages, p + 1))}
                       disabled={page === usersData.meta.totalPages}
                     >
-                      Next
+                      {t('common.next')}
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>

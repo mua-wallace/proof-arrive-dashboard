@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { dashboardApi, CurrentUser, PaginateResult, VehicleGroup } from '@/api/dashboard';
 import {
   Card,
@@ -46,17 +48,17 @@ function getInitials(name: string | undefined): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-function UserDetailsCard({ user }: { user: CurrentUser }) {
+function UserDetailsCard({ user, t }: { user: CurrentUser; t: TFunction }) {
   const displayName = user.fullname ?? user.username ?? '—';
   const initials = getInitials(displayName !== '—' ? displayName : undefined);
 
   const details = [
-    { label: 'Full name', value: displayName, icon: User },
-    { label: 'Email', value: user.email ?? '—', icon: Mail },
-    { label: 'Company', value: user.company ?? '—', icon: Building2 },
-    { label: 'Account ID', value: user.accid ?? '—', icon: User },
-    { label: 'Sub ID', value: user.subid ?? '—', icon: User },
-    { label: 'Last login', value: user.lastLoginAt ? formatDate(user.lastLoginAt) : '—', icon: Calendar },
+    { label: t('settings.profile.fullName'), value: displayName, icon: User },
+    { label: t('settings.profile.email'), value: user.email ?? '—', icon: Mail },
+    { label: t('settings.profile.company'), value: user.company ?? '—', icon: Building2 },
+    { label: t('settings.profile.accountId'), value: user.accid ?? '—', icon: User },
+    { label: t('settings.profile.subId'), value: user.subid ?? '—', icon: User },
+    { label: t('settings.profile.lastLogin'), value: user.lastLoginAt ? formatDate(user.lastLoginAt) : '—', icon: Calendar },
   ];
 
   return (
@@ -77,7 +79,7 @@ function UserDetailsCard({ user }: { user: CurrentUser }) {
                 </Badge>
               )}
             </CardTitle>
-            <CardDescription>Your account details from the server</CardDescription>
+            <CardDescription>{t('settings.profile.serverDetails')}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -105,6 +107,7 @@ function UserDetailsCard({ user }: { user: CurrentUser }) {
 }
 
 export default function Settings() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: currentUser, isLoading, error } = useQuery({
     queryKey: ['current-user'],
@@ -167,14 +170,14 @@ export default function Settings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-groups'] });
       queryClient.invalidateQueries({ queryKey: ['vehicle-groups-from-api'] });
-      toast.success('Success', 'Vehicle groups synced successfully');
+      toast.success(t('settings.groups.syncSuccess'), t('settings.groups.syncSuccessDesc'));
     },
     onError: (error: any) => {
-      const errorMessage = error?.response?.data?.message 
-        || error?.response?.data?.error 
-        || error?.message 
-        || 'Failed to sync vehicle groups';
-      toast.error('Error Syncing Groups', errorMessage);
+      const errorMessage = error?.response?.data?.message
+        || error?.response?.data?.error
+        || error?.message
+        || t('settings.groups.syncErrorDefault');
+      toast.error(t('settings.groups.syncErrorTitle'), errorMessage);
     },
   });
 
@@ -197,10 +200,10 @@ export default function Settings() {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                Settings
+                {t('settings.title')}
               </h1>
               <p className="text-muted-foreground text-sm sm:text-base">
-                Manage your account and preferences
+                {t('settings.subtitle')}
               </p>
             </div>
           </div>
@@ -211,36 +214,36 @@ export default function Settings() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-20">
             <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-            <p className="text-sm text-muted-foreground">Loading your profile…</p>
+            <p className="text-sm text-muted-foreground">{t('settings.loadingProfile')}</p>
           </CardContent>
         </Card>
       ) : error ? (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Could not load profile</AlertTitle>
+          <AlertTitle>{t('settings.profileError')}</AlertTitle>
           <AlertDescription>
-            {error instanceof Error ? error.message : 'An error occurred. Please try again.'}
+            {error instanceof Error ? error.message : t('settings.profileErrorDefault')}
           </AlertDescription>
         </Alert>
       ) : currentUser ? (
         <div className="grid gap-6 lg:grid-cols-[400px_1fr]">
-          <UserDetailsCard user={currentUser} />
+          <UserDetailsCard user={currentUser} t={t} />
           <div className="space-y-6">
             {canManageGroups && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <Car className="h-5 w-5 text-primary" />
-                    Vehicle Groups Sync
+                    {t('settings.groups.title')}
                   </CardTitle>
                   <CardDescription>
-                    Retrieve vehicle groups tree from Malambi API with pagination, filtering, searching, and sorting
+                    {t('settings.groups.description')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="groups-node">Node</Label>
+                      <Label htmlFor="groups-node">{t('settings.groups.node')}</Label>
                       <Input
                         id="groups-node"
                         placeholder="root"
@@ -248,11 +251,11 @@ export default function Settings() {
                         onChange={(e) => setGroupsNode(e.target.value)}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Group node to list (default: root)
+                        {t('settings.groups.nodeHint')}
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="groups-limit">Items Per Page</Label>
+                      <Label htmlFor="groups-limit">{t('settings.groups.itemsPerPage')}</Label>
                       <Select
                         id="groups-limit"
                         value={String(groupsLimit)}
@@ -271,12 +274,12 @@ export default function Settings() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="groups-search">Search</Label>
+                    <Label htmlFor="groups-search">{t('settings.groups.search')}</Label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="groups-search"
-                        placeholder="Search groups..."
+                        placeholder={t('settings.groups.searchPlaceholder')}
                         value={groupsSearch}
                         onChange={(e) => setGroupsSearch(e.target.value)}
                         className="pl-9"
@@ -285,16 +288,16 @@ export default function Settings() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="groups-sort">Sort By</Label>
+                    <Label htmlFor="groups-sort">{t('settings.groups.sortBy')}</Label>
                     <Select
                       id="groups-sort"
                       value={groupsSortBy}
                       onChange={(e) => setGroupsSortBy(e.target.value)}
                     >
-                      <option value="name:ASC">Name A-Z</option>
-                      <option value="name:DESC">Name Z-A</option>
-                      <option value="createdAt:DESC">Newest First</option>
-                      <option value="createdAt:ASC">Oldest First</option>
+                      <option value="name:ASC">{t('settings.groups.sortNameAsc')}</option>
+                      <option value="name:DESC">{t('settings.groups.sortNameDesc')}</option>
+                      <option value="createdAt:DESC">{t('settings.groups.sortNewest')}</option>
+                      <option value="createdAt:ASC">{t('settings.groups.sortOldest')}</option>
                     </Select>
                   </div>
 
@@ -305,16 +308,16 @@ export default function Settings() {
                       onCheckedChange={(checked) => setGroupsSync(checked === true)}
                     />
                     <Label htmlFor="groups-sync" className="cursor-pointer">
-                      Sync vehicles to local database
+                      {t('settings.groups.syncToDb')}
                     </Label>
                   </div>
 
                   {groupsError && (
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Error</AlertTitle>
+                      <AlertTitle>{t('settings.groups.errorTitle')}</AlertTitle>
                       <AlertDescription>
-                        {(groupsError as any)?.response?.data?.message || (groupsError as Error)?.message || 'Failed to fetch groups'}
+                        {(groupsError as any)?.response?.data?.message || (groupsError as Error)?.message || t('settings.groups.fetchError')}
                       </AlertDescription>
                     </Alert>
                   )}
@@ -323,10 +326,10 @@ export default function Settings() {
                     <div className="rounded-md border p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium">
-                          Found {groupsData.meta?.totalItems ?? 0} groups
+                          {t('settings.groups.found', { count: groupsData.meta?.totalItems ?? 0 })}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Page {groupsData.meta?.currentPage ?? 1} of {groupsData.meta?.totalPages ?? 1}
+                          {t('settings.groups.pageOf', { page: groupsData.meta?.currentPage ?? 1, total: groupsData.meta?.totalPages ?? 1 })}
                         </p>
                       </div>
                       {groupsData.data && groupsData.data.length > 0 ? (
@@ -340,7 +343,7 @@ export default function Settings() {
                                 <div>
                                   <p className="text-sm font-medium">{group.groupName}</p>
                                   <p className="text-xs text-muted-foreground">
-                                    {group.total} vehicle{group.total !== 1 ? 's' : ''}
+                                    {t('settings.groups.vehiclesCount', { count: group.total })}
                                   </p>
                                 </div>
                               </div>
@@ -355,10 +358,10 @@ export default function Settings() {
                                 disabled={groupsPage === 1 || groupsLoading}
                               >
                                 <ChevronLeft className="h-4 w-4" />
-                                Previous
+                                {t('settings.groups.previous')}
                               </Button>
                               <span className="text-xs text-muted-foreground">
-                                Page {groupsPage} of {groupsData.meta.totalPages}
+                                {t('settings.groups.pageOf', { page: groupsPage, total: groupsData.meta.totalPages })}
                               </span>
                               <Button
                                 variant="outline"
@@ -366,7 +369,7 @@ export default function Settings() {
                                 onClick={() => setGroupsPage((p) => Math.min(groupsData.meta!.totalPages, p + 1))}
                                 disabled={groupsPage === groupsData.meta!.totalPages || groupsLoading}
                               >
-                                Next
+                                {t('settings.groups.next')}
                                 <ChevronRight className="h-4 w-4" />
                               </Button>
                             </div>
@@ -374,7 +377,7 @@ export default function Settings() {
                         </>
                       ) : (
                         <p className="text-sm text-muted-foreground text-center py-4">
-                          No groups found
+                          {t('settings.groups.noGroups')}
                         </p>
                       )}
                     </div>
@@ -391,12 +394,12 @@ export default function Settings() {
                     {groupsLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Loading...
+                        {t('settings.groups.loading')}
                       </>
                     ) : (
                       <>
                         <Search className="h-4 w-4" />
-                        Fetch Groups
+                        {t('settings.groups.fetchGroups')}
                       </>
                     )}
                   </Button>
@@ -410,12 +413,12 @@ export default function Settings() {
                     {syncGroupsMutation.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Syncing...
+                        {t('settings.groups.syncing')}
                       </>
                     ) : (
                       <>
                         <RefreshCw className="h-4 w-4" />
-                        Sync to Database
+                        {t('settings.groups.syncToDatabase')}
                       </>
                     )}
                   </Button>
@@ -427,20 +430,20 @@ export default function Settings() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Sliders className="h-5 w-5 text-primary" />
-                  More options
+                  {t('settings.moreOptions.title')}
                 </CardTitle>
                 <CardDescription>
-                  Additional settings will appear here
+                  {t('settings.moreOptions.description')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Password change, notifications, API keys, and other preferences can be added in this section.
+                  {t('settings.moreOptions.placeholder')}
                 </p>
               </CardContent>
               <CardFooter className="border-t bg-muted/20">
                 <Button variant="outline" size="sm" disabled className="gap-2">
-                  Coming soon
+                  {t('settings.moreOptions.comingSoon')}
                 </Button>
               </CardFooter>
             </Card>

@@ -17,23 +17,51 @@ import {
   Info,
   Building2,
 } from 'lucide-react';
+import i18n from '@/lib/i18n';
 
 /** Trip/vehicle status (UI) → Proof Arrive color hex and display */
-export const TRIP_STATUS_THEME: Record<
-  string,
-  { hex: string; label: string; icon: LucideIcon }
-> = {
-  WAITING_IN_QUEUE: { hex: '#FF9800', label: 'Waiting / In Queue', icon: Clock },
-  LOADING: { hex: '#2196F3', label: 'Loading', icon: Upload },
-  UNLOADING: { hex: '#2196F3', label: 'Unloading', icon: Download },
-  AVAILABLE: { hex: '#4CAF50', label: 'Available / Ready to exit', icon: CheckCircle2 },
-  IN_TRANSIT: { hex: '#9C27B0', label: 'In Transit', icon: Truck },
-  ARRIVED: { hex: '#4CAF50', label: 'Arrived', icon: MapPin },
-  COMPLETED: { hex: '#9E9E9E', label: 'Completed', icon: CheckCheck },
-  ACTIVE: { hex: '#4CAF50', label: 'Active', icon: Radio },
-  IDLE: { hex: '#9E9E9E', label: 'Idle', icon: PauseCircle },
-  IN_GARAGE: { hex: '#9E9E9E', label: 'In Garage', icon: Building2 },
+type StatusThemeEntry = { hex: string; labelKey: string; icon: LucideIcon };
+
+const TRIP_STATUS_THEME_RAW: Record<string, StatusThemeEntry> = {
+  WAITING_IN_QUEUE: { hex: '#FF9800', labelKey: 'vehicleStatus.WAITING_IN_QUEUE', icon: Clock },
+  LOADING: { hex: '#2196F3', labelKey: 'vehicleStatus.LOADING', icon: Upload },
+  UNLOADING: { hex: '#2196F3', labelKey: 'vehicleStatus.UNLOADING', icon: Download },
+  AVAILABLE: { hex: '#4CAF50', labelKey: 'vehicleStatus.AVAILABLE', icon: CheckCircle2 },
+  IN_TRANSIT: { hex: '#9C27B0', labelKey: 'vehicleStatus.IN_TRANSIT', icon: Truck },
+  ARRIVED: { hex: '#4CAF50', labelKey: 'vehicleStatus.ARRIVED', icon: MapPin },
+  COMPLETED: { hex: '#9E9E9E', labelKey: 'vehicleStatus.COMPLETED', icon: CheckCheck },
+  ACTIVE: { hex: '#4CAF50', labelKey: 'vehicleStatus.ACTIVE', icon: Radio },
+  IDLE: { hex: '#9E9E9E', labelKey: 'vehicleStatus.IDLE', icon: PauseCircle },
+  IN_GARAGE: { hex: '#9E9E9E', labelKey: 'vehicleStatus.IN_GARAGE', icon: Building2 },
 };
+
+/**
+ * Localised view of the status theme map. Consumers use `getStatusTheme` which
+ * reads from this via i18n — this exported accessor is a Proxy-like object so
+ * direct access (TRIP_STATUS_THEME[key]) works with the current language.
+ */
+export const TRIP_STATUS_THEME = new Proxy(
+  {} as Record<string, { hex: string; label: string; icon: LucideIcon }>,
+  {
+    get(_target, prop: string) {
+      const entry = TRIP_STATUS_THEME_RAW[prop];
+      if (!entry) return undefined;
+      return { hex: entry.hex, label: i18n.t(entry.labelKey), icon: entry.icon };
+    },
+    has(_target, prop: string) {
+      return prop in TRIP_STATUS_THEME_RAW;
+    },
+    ownKeys() {
+      return Object.keys(TRIP_STATUS_THEME_RAW);
+    },
+    getOwnPropertyDescriptor(_target, prop: string) {
+      if (prop in TRIP_STATUS_THEME_RAW) {
+        return { enumerable: true, configurable: true };
+      }
+      return undefined;
+    },
+  },
+);
 
 /** API phase → derived status for color/label (from trip-store derivation) */
 const PHASE_TO_STATUS: Record<string, string> = {
@@ -58,8 +86,11 @@ export function getStatusTheme(statusOrPhase: string | undefined): {
   if (!statusOrPhase) return DEFAULT_STATUS;
   const key = statusOrPhase.toUpperCase().replace(/-/g, '_');
   const derived = PHASE_TO_STATUS[key] ?? key;
-  const theme = TRIP_STATUS_THEME[derived] ?? TRIP_STATUS_THEME[key];
-  return theme ?? { ...DEFAULT_STATUS, label: statusOrPhase.replace(/_/g, ' ') };
+  const rawEntry = TRIP_STATUS_THEME_RAW[derived] ?? TRIP_STATUS_THEME_RAW[key];
+  if (!rawEntry) {
+    return { ...DEFAULT_STATUS, label: statusOrPhase.replace(/_/g, ' ') };
+  }
+  return { hex: rawEntry.hex, label: i18n.t(rawEntry.labelKey), icon: rawEntry.icon };
 }
 
 /** Inline style for status badge (color, bg, border) — use for phase/status badges */

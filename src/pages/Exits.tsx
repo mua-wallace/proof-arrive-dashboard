@@ -1,7 +1,9 @@
+import { useTranslation } from 'react-i18next';
 import { LogOut, CheckCircle, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function Exits() {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <Card className="w-full max-w-2xl">
@@ -11,14 +13,14 @@ export default function Exits() {
             <LogOut className="h-24 w-24 text-primary relative z-10 mx-auto" />
           </div>
           <h1 className="text-4xl font-bold tracking-tight mb-4">
-            Exit Management
+            {t('comingSoon.exitsTitle')}
           </h1>
           <p className="text-xl text-muted-foreground mb-6 max-w-md">
-            Monitor vehicle exits with comprehensive tracking. View exit records, timestamps, and verification details.
+            {t('comingSoon.exitsDesc')}
           </p>
           <div className="flex items-center gap-2 text-muted-foreground">
             <CheckCircle className="h-5 w-5" />
-            <span className="text-sm">Coming soon</span>
+            <span className="text-sm">{t('comingSoon.exitsHint')}</span>
             <ArrowRight className="h-4 w-4" />
           </div>
         </CardContent>

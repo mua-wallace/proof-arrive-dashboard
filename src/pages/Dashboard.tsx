@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   startOfDay,
   endOfDay,
@@ -117,6 +118,7 @@ function DashboardSkeleton() {
 }
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const [datePreset, setDatePreset] = useState<ReportDatePreset>('today');
   const [centerId, setCenterId] = useState<number | ''>('');
   const [vehicleId, setVehicleId] = useState<number | ''>('');
@@ -236,8 +238,8 @@ export default function Dashboard() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">Loading operational overview…</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('dashboard.title')}</h1>
+          <p className="text-muted-foreground">{t('dashboard.loadingOverview')}</p>
         </div>
         <DashboardSkeleton />
       </div>
@@ -259,23 +261,23 @@ export default function Dashboard() {
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 font-medium">
                 <Sparkles className="h-3.5 w-3.5 mr-1" />
-                Operational overview
+                {t('dashboard.badges.operationalOverview')}
               </Badge>
               {errorReports && (
                 <Badge variant="secondary" className="bg-status-warning/90 text-white border-status-warning font-medium">
                   <AlertCircle className="h-3.5 w-3.5 mr-1" />
-                  Partial data
+                  {t('dashboard.badges.partialData')}
                 </Badge>
               )}
             </div>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Dashboard</h1>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">{t('dashboard.title')}</h1>
             <p className="mt-1 max-w-md text-sm text-primary-foreground/90">
-              Real-time vehicle status, trips, and queue overview at a glance
+              {t('dashboard.subtitle')}
             </p>
           </div>
           <Badge variant="secondary" className="w-fit bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 font-medium">
             <Activity className="h-4 w-4 mr-1.5" />
-            Live data
+            {t('dashboard.badges.liveData')}
           </Badge>
         </div>
         <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary-foreground/10" />
@@ -287,10 +289,10 @@ export default function Dashboard() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
             <Filter className="h-4 w-4 text-primary" />
-            Report filters
+            {t('dashboard.filters.title')}
           </CardTitle>
           <CardDescription>
-            Trip and queue stats use the selected period and optional center/vehicle
+            {t('dashboard.filters.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -298,26 +300,26 @@ export default function Dashboard() {
             <div className="space-y-2">
               <Label htmlFor="report-date" className="flex items-center gap-1.5 text-sm">
                 <Calendar className="h-3.5 w-3.5" />
-                Period
+                {t('dashboard.filters.period')}
               </Label>
               <Select
                 id="report-date"
                 value={datePreset}
                 onChange={(e) => setDatePreset(e.target.value as ReportDatePreset)}
               >
-                <option value="today">Today</option>
-                <option value="last7">Last 7 days</option>
-                <option value="month">This month</option>
+                <option value="today">{t('dashboard.period.today')}</option>
+                <option value="last7">{t('dashboard.period.last7')}</option>
+                <option value="month">{t('dashboard.period.month')}</option>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="report-center" className="text-sm">Center</Label>
+              <Label htmlFor="report-center" className="text-sm">{t('dashboard.filters.center')}</Label>
               <Select
                 id="report-center"
                 value={centerId === '' ? 'all' : String(centerId)}
                 onChange={(e) => setCenterId(e.target.value === 'all' ? '' : Number(e.target.value))}
               >
-                <option value="all">All centers</option>
+                <option value="all">{t('dashboard.filters.allCenters')}</option>
                 {(centers as { id: number; name?: string }[]).map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name ?? `Center ${c.id}`}
@@ -326,13 +328,13 @@ export default function Dashboard() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="report-vehicle" className="text-sm">Vehicle</Label>
+              <Label htmlFor="report-vehicle" className="text-sm">{t('dashboard.filters.vehicle')}</Label>
               <Select
                 id="report-vehicle"
                 value={vehicleId === '' ? 'all' : String(vehicleId)}
                 onChange={(e) => setVehicleId(e.target.value === 'all' ? '' : Number(e.target.value))}
               >
-                <option value="all">All vehicles</option>
+                <option value="all">{t('dashboard.filters.allVehicles')}</option>
                 {(vehicles as { id: number; plate?: string }[]).map((v) => (
                   <option key={v.id} value={v.id}>
                     {v.plate ?? `Vehicle ${v.id}`}
@@ -348,7 +350,7 @@ export default function Dashboard() {
       <section>
         <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
           <Car className="h-4 w-4 text-primary" />
-          Vehicles by status
+          {t('dashboard.vehiclesByStatus')}
         </h2>
         <div className="flex flex-wrap gap-2">
           {VEHICLE_STATUS_KEYS.map((key) => {
@@ -376,7 +378,7 @@ export default function Dashboard() {
         </div>
         {totalVehicles > 0 && (
           <p className="mt-3 text-sm text-muted-foreground">
-            Total vehicles: <span className="font-semibold text-foreground">{formatNumber(totalVehicles)}</span>
+            {t('dashboard.totalVehicles')} <span className="font-semibold text-foreground">{formatNumber(totalVehicles)}</span>
           </p>
         )}
       </section>
@@ -389,11 +391,14 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <Badge variant="secondary" className="mb-2 text-[10px] font-medium uppercase tracking-wider border-status-info/30 bg-status-info/10 text-status-info">
-                    Trips (period)
+                    {t('dashboard.kpi.trips')}
                   </Badge>
                   <p className="text-2xl font-bold text-foreground">{formatNumber(startedInPeriod)}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {formatNumber(completedInPeriod)} completed · {formatNumber(ongoingCount)} ongoing
+                    {t('dashboard.kpi.tripsSub', {
+                      completed: formatNumber(completedInPeriod),
+                      ongoing: formatNumber(ongoingCount),
+                    })}
                   </p>
                 </div>
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-status-info/15">
@@ -409,7 +414,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <Badge variant="secondary" className="mb-2 text-[10px] font-medium uppercase tracking-wider border-status-success/30 bg-status-success/10 text-status-success">
-                  Completion rate
+                  {t('dashboard.kpi.completionRate')}
                 </Badge>
                 <p className="text-2xl font-bold text-foreground">
                   {typeof completionRatePercent === 'number' ? `${completionRatePercent.toFixed(1)}%` : '—'}
@@ -428,7 +433,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <Badge variant="secondary" className="mb-2 text-[10px] font-medium uppercase tracking-wider border-status-transit/30 bg-status-transit/10 text-status-transit">
-                    Centers
+                    {t('dashboard.kpi.centers')}
                   </Badge>
                   <p className="text-2xl font-bold text-foreground">{formatNumber(centerCount)}</p>
                 </div>
@@ -445,10 +450,10 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <Badge variant="secondary" className="mb-2 text-[10px] font-medium uppercase tracking-wider border-status-warning/30 bg-status-warning/10 text-status-warning">
-                  Queues active
+                  {t('dashboard.kpi.queuesActive')}
                 </Badge>
                 <p className="text-2xl font-bold text-foreground">{formatNumber(queueActive)}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">Loading / Unloading</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{t('dashboard.kpi.queuesActiveSub')}</p>
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-status-warning/15">
                 <ListOrdered className="h-6 w-6 text-status-warning" />
@@ -464,8 +469,8 @@ export default function Dashboard() {
           {tripsByDate.length > 0 && (
             <Card className="border-border bg-card">
               <CardHeader>
-                <CardTitle className="text-base font-semibold text-foreground">Trips over time</CardTitle>
-                <CardDescription>Started and completed in the selected period</CardDescription>
+                <CardTitle className="text-base font-semibold text-foreground">{t('dashboard.charts.tripsOverTime')}</CardTitle>
+                <CardDescription>{t('dashboard.charts.tripsOverTimeDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-64">
@@ -490,7 +495,7 @@ export default function Dashboard() {
                       <Area
                         type="monotone"
                         dataKey="started"
-                        name="Started"
+                        name={t('dashboard.charts.started')}
                         fill="var(--status-info)"
                         stroke="var(--status-info)"
                         fillOpacity={0.5}
@@ -498,7 +503,7 @@ export default function Dashboard() {
                       <Area
                         type="monotone"
                         dataKey="completed"
-                        name="Completed"
+                        name={t('dashboard.charts.completed')}
                         fill="var(--status-success)"
                         stroke="var(--status-success)"
                         fillOpacity={0.5}
@@ -512,8 +517,8 @@ export default function Dashboard() {
           {queuesByDate.length > 0 && (
             <Card className="border-border bg-card">
               <CardHeader>
-                <CardTitle className="text-base font-semibold text-foreground">Queue activity over time</CardTitle>
-                <CardDescription>Active loading and unloading in the selected period</CardDescription>
+                <CardTitle className="text-base font-semibold text-foreground">{t('dashboard.charts.queuesOverTime')}</CardTitle>
+                <CardDescription>{t('dashboard.charts.queuesOverTimeDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-64">
@@ -538,7 +543,7 @@ export default function Dashboard() {
                       <Area
                         type="monotone"
                         dataKey="loading"
-                        name="Loading active"
+                        name={t('dashboard.charts.loadingActive')}
                         fill="var(--status-warning)"
                         stroke="var(--status-warning)"
                         fillOpacity={0.6}
@@ -546,7 +551,7 @@ export default function Dashboard() {
                       <Area
                         type="monotone"
                         dataKey="unloading"
-                        name="Unloading active"
+                        name={t('dashboard.charts.unloadingActive')}
                         fill="var(--status-transit)"
                         stroke="var(--status-transit)"
                         fillOpacity={0.6}
@@ -568,13 +573,13 @@ export default function Dashboard() {
               <div>
                 <CardTitle className="flex items-center gap-2 text-foreground">
                   <Truck className="h-5 w-5 text-primary" />
-                  Active trips
+                  {t('dashboard.activeTrips.title')}
                 </CardTitle>
-                <CardDescription>Ongoing trips between centers</CardDescription>
+                <CardDescription>{t('dashboard.activeTrips.description')}</CardDescription>
               </div>
               <Link to="/app/trips">
                 <Button variant="ghost" size="sm" className="gap-1.5 font-medium text-foreground">
-                  View all
+                  {t('dashboard.activeTrips.viewAll')}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
@@ -584,8 +589,8 @@ export default function Dashboard() {
             {activeTrips.length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30 py-12 text-center">
                 <ArrowRightLeft className="h-10 w-10 text-muted-foreground" />
-                <p className="mt-3 font-medium text-muted-foreground">No active trips</p>
-                <p className="mt-0.5 text-sm text-muted-foreground">Trips will appear here when in progress</p>
+                <p className="mt-3 font-medium text-muted-foreground">{t('dashboard.activeTrips.empty')}</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">{t('dashboard.activeTrips.emptyHint')}</p>
               </div>
             ) : (
               <ul className="space-y-2">
@@ -632,17 +637,17 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground">
               <Clock className="h-5 w-5 text-primary" />
-              Quick links
+              {t('dashboard.quickLinks.title')}
             </CardTitle>
-            <CardDescription>Jump to main views</CardDescription>
+            <CardDescription>{t('dashboard.quickLinks.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2">
               {[
-                { to: '/app/vehicles', label: 'Vehicles', sub: 'Manage fleet', icon: Car },
-                { to: '/app/trips', label: 'Trips', sub: 'View all trips', icon: ArrowRightLeft },
-                { to: '/app/centers', label: 'Centers', sub: 'Queues & sites', icon: Building2 },
-                { to: '/app/settings', label: 'Settings', sub: 'Preferences', icon: Activity },
+                { to: '/app/vehicles', label: t('dashboard.quickLinks.vehiclesLabel'), sub: t('dashboard.quickLinks.vehiclesSub'), icon: Car },
+                { to: '/app/trips', label: t('dashboard.quickLinks.tripsLabel'), sub: t('dashboard.quickLinks.tripsSub'), icon: ArrowRightLeft },
+                { to: '/app/centers', label: t('dashboard.quickLinks.centersLabel'), sub: t('dashboard.quickLinks.centersSub'), icon: Building2 },
+                { to: '/app/settings', label: t('dashboard.quickLinks.settingsLabel'), sub: t('dashboard.quickLinks.settingsSub'), icon: Activity },
               ].map((item) => {
                 const Icon = item.icon;
                 return (
