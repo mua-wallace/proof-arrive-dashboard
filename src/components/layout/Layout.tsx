@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth.store';
 import { Button } from '@/components/ui/button';
+import { dashboardApi } from '@/api/dashboard';
 import {
   LayoutDashboard,
   Users,
@@ -13,6 +15,7 @@ import {
   ChevronRight,
   Settings,
   CheckCircle2,
+  Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -28,8 +31,31 @@ const otherNav = [{ name: 'Users', href: '/app/users', icon: Users }];
 
 export default function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, clearAuth } = useAuthStore();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  const { data: pendingData } = useQuery({
+    queryKey: ['trips', 'pending'],
+    queryFn: () => dashboardApi.getPendingTrips(),
+    retry: 1,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const pendingCount = Array.isArray(pendingData?.data) ? pendingData.data.length : 0;
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['users', 'me'],
+    queryFn: () => dashboardApi.getCurrentUser(),
+    staleTime: 5 * 60_000,
+    retry: 1,
+  });
+  const displayRole =
+    currentUser?.role ?? (user as { role?: string } | null)?.role ?? user?.username ?? '—';
+
+  const handleBellClick = () => {
+    navigate('/app/trips?view=uncompleted');
+  };
 
   const handleLogout = () => {
     clearAuth();
@@ -149,7 +175,7 @@ export default function Layout() {
                 <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                   Signed in
                 </p>
-                <p className="mt-0.5 truncate text-sm font-medium">{user?.username ?? 'agent'}</p>
+                <p className="mt-0.5 truncate text-sm font-medium capitalize">{displayRole}</p>
                 <Button
                   variant="outline"
                   size="sm"
@@ -171,6 +197,26 @@ export default function Layout() {
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto">
+          <header className="sticky top-0 z-20 flex h-16 items-center justify-end border-b border-border/80 bg-background/80 px-4 backdrop-blur-xl sm:px-6">
+            <button
+              type="button"
+              onClick={handleBellClick}
+              title={
+                pendingCount > 0
+                  ? `${pendingCount} uncompleted trip${pendingCount === 1 ? '' : 's'}`
+                  : 'No uncompleted trips'
+              }
+              aria-label="Uncompleted trips"
+              className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Bell className="h-5 w-5" />
+              {pendingCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-bold leading-none text-white ring-2 ring-background">
+                  {pendingCount > 99 ? '99+' : pendingCount}
+                </span>
+              )}
+            </button>
+          </header>
           <div className="mx-auto w-full max-w-[1600px] px-3 py-5 sm:px-4">
             <Outlet />
           </div>

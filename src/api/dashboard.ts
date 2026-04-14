@@ -648,6 +648,33 @@ export const dashboardApi = {
     return { data: [], meta: { itemsPerPage: 0, totalItems: 0, currentPage: 1, totalPages: 1 } };
   },
 
+  /** Get trips that started before today and are still not completed */
+  getPendingTrips: async (include?: string): Promise<PaginateResult<Trip>> => {
+    const response = await apiClient.get<any>('/trips/pending', {
+      params: { include: include ?? 'vehicle,originCenter,destinationCenter,events' },
+    });
+    const raw = response.data;
+    if (Array.isArray(raw)) {
+      return { data: raw, meta: { itemsPerPage: raw.length, totalItems: raw.length, currentPage: 1, totalPages: 1 } };
+    }
+    if (raw && typeof raw === 'object' && Array.isArray(raw.data)) {
+      return raw as PaginateResult<Trip>;
+    }
+    if (raw && typeof raw === 'object' && Array.isArray(raw.items)) {
+      const r = raw as { items: Trip[]; totalPages?: number; totalItems?: number; currentPage?: number };
+      return {
+        data: r.items,
+        meta: {
+          itemsPerPage: r.items.length,
+          totalItems: r.totalItems ?? r.items.length,
+          currentPage: r.currentPage ?? 1,
+          totalPages: r.totalPages ?? 1,
+        },
+      };
+    }
+    return { data: [], meta: { itemsPerPage: 0, totalItems: 0, currentPage: 1, totalPages: 1 } };
+  },
+
   getTripById: async (id: number, include?: string): Promise<Trip> => {
     const response = await apiClient.get<Trip>(`/trips/${id}`, {
       params: include ? { include } : undefined,

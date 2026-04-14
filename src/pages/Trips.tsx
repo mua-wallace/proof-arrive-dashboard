@@ -5,6 +5,7 @@ import {
   dashboardApi,
   type Trip,
   type TripsQuery,
+  type Vehicle,
 } from '@/api/dashboard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,13 @@ export default function Trips() {
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [createdAt, setCreatedAt] = useState(() => searchParams.get('createdAt') || '');
   const [detailTripId, setDetailTripId] = useState<number | null>(null);
+  const [showUncompleted, setShowUncompleted] = useState(
+    () => searchParams.get('view') === 'uncompleted'
+  );
+
+  useEffect(() => {
+    setShowUncompleted(searchParams.get('view') === 'uncompleted');
+  }, [searchParams]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 400);
@@ -71,8 +79,9 @@ export default function Trips() {
     if (purpose) params.set('purpose', purpose);
     if (debouncedSearch) params.set('search', debouncedSearch);
     if (createdAt) params.set('createdAt', createdAt);
+    if (showUncompleted) params.set('view', 'uncompleted');
     setSearchParams(params, { replace: true });
-  }, [page, status, purpose, debouncedSearch, createdAt, setSearchParams]);
+  }, [page, status, purpose, debouncedSearch, createdAt, showUncompleted, setSearchParams]);
 
   const query: TripsQuery = {
     page,
@@ -100,7 +109,35 @@ export default function Trips() {
       }),
     placeholderData: keepPreviousData,
     retry: 1,
+    enabled: !showUncompleted,
   });
+
+  const {
+    data: pendingData,
+    isLoading: pendingLoading,
+    isFetching: pendingFetching,
+    error: pendingError,
+    refetch: refetchPending,
+  } = useQuery({
+    queryKey: ['trips', 'pending'],
+    queryFn: () => dashboardApi.getPendingTrips(),
+    enabled: showUncompleted,
+    retry: 1,
+  });
+
+  const { data: vehiclesForLookup } = useQuery({
+    queryKey: ['vehicles', 'lookup'],
+    queryFn: () => dashboardApi.getVehicles({ limit: 1000 }),
+    enabled: showUncompleted,
+    staleTime: 5 * 60_000,
+  });
+
+  const vehiclePlateById = new Map<number, string>();
+  if (Array.isArray(vehiclesForLookup?.data)) {
+    for (const v of vehiclesForLookup.data as Vehicle[]) {
+      if (v?.id != null && v.plate) vehiclePlateById.set(v.id, v.plate);
+    }
+  }
 
   const { data: detailTrip, isLoading: detailLoading, error: detailError, refetch: refetchDetail } = useQuery({
     queryKey: ['trip', detailTripId],
@@ -130,15 +167,21 @@ export default function Trips() {
     return (center?.name ?? center?.label ?? center?.centerName) || `Center ${centerId}`;
   };
 
-  const trips: Trip[] = Array.isArray(data?.data) ? data.data : [];
-  const meta = data?.meta;
-  const totalPages = meta?.totalPages ?? 1;
+  const activeData = showUncompleted ? pendingData : data;
+  const activeLoading = showUncompleted ? pendingLoading : isLoading;
+  const activeFetching = showUncompleted ? pendingFetching : isFetching;
+  const activeError = showUncompleted ? pendingError : error;
+  const activeRefetch = showUncompleted ? refetchPending : refetch;
+
+  const trips: Trip[] = Array.isArray(activeData?.data) ? activeData.data : [];
+  const meta = activeData?.meta;
+  const totalPages = showUncompleted ? 1 : meta?.totalPages ?? 1;
   const totalItems = meta?.totalItems ?? 0;
   const apiErrorMessage =
-    error instanceof Error
-      ? error.message
-      : error != null
-        ? String(error)
+    activeError instanceof Error
+      ? activeError.message
+      : activeError != null
+        ? String(activeError)
         : null;
 
   const getPhaseDisplayLabel = (phase: string | undefined, status: string | undefined): string => {
@@ -233,35 +276,57 @@ export default function Trips() {
 
       <Card className="overflow-hidden rounded-2xl">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <CardTitle>Trips list</CardTitle>
+              <CardTitle>{showUncompleted ? 'Uncompleted trips' : 'Trips list'}</CardTitle>
               <CardDescription>
-                {meta
-                  ? `Showing ${(page - 1) * limit + 1} to ${Math.min(page * limit, totalItems)} of ${formatNumber(totalItems)} trips`
-                  : 'Loading…'}
+                {showUncompleted
+                  ? meta
+                    ? `Showing ${formatNumber(trips.length)} trip${trips.length === 1 ? '' : 's'} started before today and still not completed`
+                    : 'Loading…'
+                  : meta
+                    ? `Showing ${(page - 1) * limit + 1} to ${Math.min(page * limit, totalItems)} of ${formatNumber(totalItems)} trips`
+                    : 'Loading…'}
               </CardDescription>
             </div>
+            {showUncompleted && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="whitespace-nowrap"
+                onClick={() => setShowUncompleted(false)}
+              >
+                Show all trips
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
           {apiErrorMessage ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <p className="font-medium text-destructive mb-1">Failed to load trips</p>
+              <p className="font-medium text-destructive mb-1">
+                {showUncompleted ? 'Failed to load uncompleted trips' : 'Failed to load trips'}
+              </p>
               <p className="text-sm text-muted-foreground mb-4 max-w-md">{apiErrorMessage}</p>
-              <Button variant="outline" onClick={() => refetch()}>
+              <Button variant="outline" onClick={() => activeRefetch()}>
                 Try again
               </Button>
             </div>
-          ) : isLoading ? (
+          ) : activeLoading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
             </div>
           ) : !trips.length ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <ArrowRightLeft className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="font-medium text-muted-foreground">No trips found</p>
-              <p className="text-sm text-muted-foreground mt-1">Adjust filters or try another search</p>
+              <p className="font-medium text-muted-foreground">
+                {showUncompleted ? 'No uncompleted trips' : 'No trips found'}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {showUncompleted
+                  ? 'Every trip started before today has been completed'
+                  : 'Adjust filters or try another search'}
+              </p>
             </div>
           ) : (
             <>
@@ -282,7 +347,9 @@ export default function Trips() {
                     {trips.map((trip) => (
                       <TableRow key={trip.id}>
                         <TableCell className="font-medium">
-                          {trip.vehicle?.plate ?? `#${trip.vehicleId}`}
+                          {trip.vehicle?.plate
+                            ?? vehiclePlateById.get(trip.vehicleId)
+                            ?? `#${trip.vehicleId}`}
                         </TableCell>
                         <TableCell>
                           {trip.originCenter?.name ?? `Center ${trip.originCenterId}`}
@@ -324,7 +391,7 @@ export default function Trips() {
                 </Table>
               </div>
 
-              {totalPages > 1 && (
+              {!showUncompleted && totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4">
                   <p className="text-sm text-muted-foreground">
                     Page {page} of {totalPages}
@@ -334,7 +401,7 @@ export default function Trips() {
                       variant="outline"
                       size="sm"
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page === 1 || isFetching}
+                      disabled={page === 1 || activeFetching}
                     >
                       <ChevronLeft className="h-4 w-4" />
                       Previous
@@ -343,7 +410,7 @@ export default function Trips() {
                       variant="outline"
                       size="sm"
                       onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={page === totalPages || isFetching}
+                      disabled={page === totalPages || activeFetching}
                     >
                       Next
                       <ChevronRight className="h-4 w-4" />

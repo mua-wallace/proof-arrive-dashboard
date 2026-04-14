@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProofArrive Dashboard Documentation</title>
+<style>
+  /* ================================================================
+     SCREEN STYLES — Documentation Layout
+     ================================================================ */
+  * { box-sizing: border-box; }
+  :root {
+    --brand: #0a7ea4;
+    --brand-dark: #086b8c;
+    --brand-light: #e0f2fe;
+    --ink: #0f172a;
+    --body: #334155;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --sidebar-w: 280px;
+    --topbar-h: 60px;
+  }
+  html, body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--body);
+    line-height: 1.65;
+    font-size: 16px;
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- Top Bar ---- */
+  .topbar {
+    position: sticky;
+    top: 0;
+    height: var(--topbar-h);
+    background: #ffffff;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    z-index: 100;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  }
+  .topbar .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .topbar .brand .logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 7px;
+    background: linear-gradient(135deg, #0a7ea4 0%, #086b8c 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: -0.5px;
+  }
+  .topbar .brand .tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--brand);
+    background: var(--brand-light);
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    margin-left: 4px;
+  }
+  .topbar .version {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* ---- Layout Shell ---- */
+  .shell {
+    display: flex;
+    max-width: 1280px;
+    margin: 0 auto;
+    align-items: flex-start;
+  }
+
+  /* ---- Sidebar ---- */
+  .sidebar {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: sticky;
+    top: var(--topbar-h);
+    height: calc(100vh - var(--topbar-h));
+    overflow-y: auto;
+    padding: 32px 20px 32px 28px;
+    border-right: 1px solid var(--line);
+  }
+  .sidebar h4 {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    margin: 0 0 12px 0;
+    padding-left: 10px;
+  }
+  .sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 28px 0;
+  }
+  .sidebar li { margin: 0; }
+  .sidebar a {
+    display: block;
+    padding: 7px 10px;
+    color: var(--body);
+    text-decoration: none;
+    font-size: 14px;
+    border-radius: 6px;
+    border-left: 2px solid transparent;
+    transition: all 0.15s ease;
+  }
+  .sidebar a:hover {
+    background: var(--bg);
+    color: var(--brand);
+  }
+  .sidebar a.active {
+    background: var(--brand-light);
+    color: var(--brand-dark);
+    border-left-color: var(--brand);
+    font-weight: 600;
+  }
+
+  /* ---- Main Content Area ---- */
+  .content {
+    flex: 1;
+    min-width: 0;
+    padding: 48px 56px 64px;
+    max-width: 920px;
+  }
+  .doc-header {
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+  }
+  .doc-header .eyebrow {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--brand);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 10px;
+  }
+  .doc-header h1 {
+    color: var(--ink);
+    font-size: 38px;
+    margin: 0 0 12px 0;
+    letter-spacing: -0.8px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+  .doc-header .lede {
+    color: var(--muted);
+    font-size: 18px;
+    line-height: 1.55;
+    margin: 0;
+    max-width: 680px;
+  }
+  .doc-meta {
+    display: flex;
+    gap: 20px;
+    margin-top: 20px;
+    font-size: 13px;
+    color: var(--muted);
+    flex-wrap: wrap;
+  }
+  .doc-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .doc-meta strong { color: var(--body); font-weight: 600; }
+
+  /* ---- Headings ---- */
+  h2 {
+    color: var(--ink);
+    font-size: 28px;
+    margin-top: 64px;
+    margin-bottom: 18px;
+    padding: 4px 0 12px 16px;
+    border-bottom: 1px solid var(--line);
+    border-left: 4px solid var(--brand);
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    scroll-margin-top: calc(var(--topbar-h) + 20px);
+    page-break-after: avoid;
+  }
+  h2:first-of-type { margin-top: 0; }
+  h3 {
+    color: var(--ink);
+    font-size: 19px;
+    margin-top: 36px;
+    margin-bottom: 10px;
+    font-weight: 700;
+    scroll-margin-top: calc(var(--topbar-h) + 20px);
+    page-break-after: avoid;
+  }
+
+  p {
+    margin: 12px 0;
+    font-size: 16px;
+    color: var(--body);
+  }
+  strong { color: var(--ink); font-weight: 600; }
+  ul, ol { margin: 14px 0; padding-left: 26px; }
+  li { margin: 7px 0; color: var(--body); }
+
+  /* ---- Callouts ---- */
+  .callout {
+    margin: 24px 0;
+    padding: 18px 22px 18px 58px;
+    border-radius: 10px;
+    border: 1px solid;
+    border-left-width: 4px;
+    position: relative;
+    font-size: 15px;
+    line-height: 1.65;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  }
+  .callout::before {
+    position: absolute;
+    left: 20px;
+    top: 18px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .callout p { margin: 4px 0; font-size: 15px; }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .title {
+    display: block;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 4px;
+    font-size: 15px;
+  }
+
+  .callout.info {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1e3a8a;
+  }
+  .callout.info::before { content: "ⓘ"; color: #2563eb; }
+
+  .callout.note {
+    background: #f0f9ff;
+    border-color: #bae6fd;
+    color: #075985;
+  }
+  .callout.note::before { content: "✎"; color: #0284c7; }
+
+  .callout.warning {
+    background: #fffbeb;
+    border-color: #fcd34d;
+    color: #78350f;
+  }
+  .callout.warning::before { content: "⚠"; color: #d97706; }
+
+  .callout.tip {
+    background: #f0fdf4;
+    border-color: #86efac;
+    color: #14532d;
+  }
+  .callout.tip::before { content: "✓"; color: #16a34a; }
+
+  /* ---- Code / Credentials ---- */
+  code {
+    background: #f1f5f9;
+    color: #0f172a;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.92em;
+    border: 1px solid var(--line);
+  }
+
+  /* ---- Tables ---- */
+  table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    margin: 24px 0;
+    font-size: 15px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+  th {
+    background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+    color: var(--ink);
+    text-align: left;
+    padding: 13px 18px;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--line);
+  }
+  td {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    color: var(--body);
+  }
+  tbody tr:nth-child(even) td { background: #f8fafc; }
+  tbody tr:hover td { background: #eff6ff; }
+  tr:last-child td { border-bottom: none; }
+
+  /* ---- Story box ---- */
+  .story {
+    background: #fffbeb;
+    border-left: 4px solid #f59e0b;
+    padding: 22px 28px;
+    border-radius: 6px;
+    margin: 22px 0;
+  }
+  .story p:first-child { margin-top: 0; }
+  .story p:last-child { margin-bottom: 0; }
+
+  /* ---- Flow Diagram ---- */
+  .flow-diagram {
+    text-align: center;
+    margin: 28px 0 36px 0;
+    padding: 32px 20px;
+    background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%);
+    border-radius: 12px;
+    border: 1px solid var(--brand-light);
+    page-break-inside: avoid;
+  }
+  .flow-diagram svg {
+    width: 100%;
+    max-width: 720px;
+    height: auto;
+  }
+
+  /* ---- Footer ---- */
+  .doc-footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .doc-footer p { margin: 4px 0; color: var(--muted); font-size: 13px; }
+
+  /* ================================================================
+     RESPONSIVE
+     ================================================================ */
+  @media (max-width: 1000px) {
+    .sidebar { display: none; }
+    .content { padding: 40px 32px 56px; max-width: 100%; }
+  }
+  @media (max-width: 640px) {
+    .content { padding: 28px 20px 40px; }
+    .doc-header h1 { font-size: 28px; }
+    .doc-header .lede { font-size: 16px; }
+    h2 { font-size: 22px; }
+    h3 { font-size: 17px; }
+    .topbar { padding: 0 16px; }
+    .topbar .version { display: none; }
+  }
+
+  /* ================================================================
+     PRINT STYLES — PDF generation
+     ================================================================ */
+  @page {
+    size: A4;
+    margin: 18mm 16mm;
+  }
+  @media print {
+    html, body {
+      background: #ffffff;
+      font-size: 11pt;
+      line-height: 1.55;
+      color: #1f2937;
+    }
+    .topbar, .sidebar { display: none; }
+    .shell { display: block; max-width: none; }
+    .content {
+      padding: 0;
+      max-width: none;
+    }
+    .doc-header {
+      text-align: center;
+      border-bottom: 2px solid var(--brand);
+      padding-bottom: 20px;
+      margin-bottom: 28px;
+    }
+    .doc-header h1 { font-size: 26pt; }
+    .doc-header .lede { font-size: 13pt; margin: 0 auto; }
+    .doc-header .eyebrow { font-size: 10pt; }
+    .doc-meta { justify-content: center; font-size: 10pt; }
+    h2 { font-size: 16pt; margin-top: 24pt; }
+    h3 { font-size: 12.5pt; margin-top: 16pt; }
+    p, li { font-size: 11pt; }
+    table { font-size: 10.5pt; }
+    .callout { font-size: 10.5pt; page-break-inside: avoid; }
+    .callout p { font-size: 10.5pt; }
+    .flow-diagram {
+      background: none;
+      border: 1px solid #e5e7eb;
+      padding: 16px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- =============== TOP BAR =============== -->
+<header class="topbar">
+  <a class="brand" href="#top">
+    <span class="logo">PA</span>
+    ProofArrive
+    <span class="tag">Dashboard Docs</span>
+  </a>
+  <span class="version">v1.0 · Admin Guide</span>
+</header>
+
+<div class="shell">
+
+  <!-- =============== SIDEBAR =============== -->
+  <aside class="sidebar">
+    <h4>Getting Started</h4>
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#audience">Who It's For</a></li>
+      <li><a href="#login">Logging In</a></li>
+      <li><a href="#layout">Dashboard Layout</a></li>
+    </ul>
+
+    <h4>Main Pages</h4>
+    <ul>
+      <li><a href="#dashboard">Dashboard</a></li>
+      <li><a href="#trips">Trips</a></li>
+      <li><a href="#vehicles">Vehicles</a></li>
+      <li><a href="#available">Available Vehicles</a></li>
+      <li><a href="#centers">Centers</a></li>
+      <li><a href="#users">Users</a></li>
+      <li><a href="#settings">Settings</a></li>
+    </ul>
+
+    <h4>Deep Dives</h4>
+    <ul>
+      <li><a href="#roles">Roles &amp; Permissions</a></li>
+      <li><a href="#qr">Vehicle QR Codes</a></li>
+      <li><a href="#story">Worked Example</a></li>
+    </ul>
+
+    <h4>Reference</h4>
+    <ul>
+      <li><a href="#statuses">Vehicle Statuses</a></li>
+      <li><a href="#glossary">Glossary</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ul>
+  </aside>
+
+  <!-- =============== MAIN CONTENT =============== -->
+  <main class="content" id="top">
+
+    <div class="doc-header">
+      <div class="eyebrow">Admin Guide</div>
+      <h1>ProofArrive Dashboard — How It Works</h1>
+      <p class="lede">
+        A step-by-step guide for operations managers, dispatchers, and administrators
+        using the ProofArrive web dashboard to monitor vehicles, manage trips,
+        and oversee distribution centers in real time.
+      </p>
+      <div class="doc-meta">
+        <span>🖥️ <strong>Platform:</strong>&nbsp;Web browser</span>
+        <span>👥 <strong>Audience:</strong>&nbsp;Operations &amp; admins</span>
+        <span>📖 <strong>Reading time:</strong>&nbsp;~10 minutes</span>
+      </div>
+    </div>
+
+    <h2 id="overview">Overview</h2>
+    <p>The <strong>ProofArrive Dashboard</strong> is the web-based control room for the ProofArrive system. While field staff use the mobile app to scan vehicles at distribution centers, managers and administrators use the dashboard to <strong>see the whole operation at a glance</strong> — which vehicles are moving, which centers are busy, which trips are running late, and who is doing what.</p>
+    <p>Every piece of data you see here comes directly from the scans performed in the field. The dashboard aggregates those scans into <strong>live KPIs</strong>, <strong>trip timelines</strong>, <strong>fleet status</strong>, and <strong>center queues</strong>, so decisions can be made with trustworthy, up-to-the-minute information.</p>
+
+    <div class="callout info">
+      <span class="title">One system, two interfaces</span>
+      <p>The mobile app creates the data (scans, timestamps, GPS proofs). The dashboard makes sense of it — filtering, grouping, charting, and exposing the controls that keep the fleet running.</p>
+    </div>
+
+    <p><strong>What problem does it solve?</strong> It replaces spreadsheets, status meetings, and phone calls with a single live view of the entire operation, where every number is traceable back to a real, timestamped event.</p>
+
+    <h2 id="audience">Who It's For</h2>
+    <p>The dashboard is built for three kinds of users:</p>
+    <ul>
+      <li><strong>Operations managers</strong> — watch KPIs, spot bottlenecks, and keep trips flowing.</li>
+      <li><strong>Dispatchers</strong> — assign vehicles to centers, review timelines, and follow active trips.</li>
+      <li><strong>Administrators</strong> — manage users, regenerate vehicle QR codes, and configure centers and groups.</li>
+    </ul>
+    <p>All three share the same interface — what each person can actually <em>do</em> depends on their role. See <a href="#roles">Roles &amp; Permissions</a> for the full breakdown.</p>
+
+    <h2 id="login">Logging In</h2>
+    <p>The dashboard runs in any modern web browser. When you open it for the first time, you land on a public welcome page and must sign in before you can access any operational data.</p>
+
+    <div class="callout warning">
+      <span class="title">Your login credentials</span>
+      <p>Use your <strong>Malambi credentials</strong> to sign in — the same username and password you use for the ProofArrive mobile app and other Malambi systems. If you don't have an account yet, contact your system administrator.</p>
+    </div>
+
+    <ol>
+      <li>Open the dashboard URL in your browser.</li>
+      <li>Click <strong>Sign In</strong> on the landing page.</li>
+      <li>Enter your <strong>username</strong> and <strong>password</strong>.</li>
+      <li>Click <strong>Sign In</strong> to enter the app.</li>
+    </ol>
+
+    <p>Once signed in, the dashboard remembers you in your browser. It refreshes your session automatically in the background, so you rarely need to re-enter your password. Use the <strong>Logout</strong> button at the bottom of the sidebar whenever you want to end the session — especially on shared computers.</p>
+
+    <div class="callout note">
+      <span class="title">Security details</span>
+      <p>Access is controlled with short-lived JWT tokens. Expired sessions are refreshed silently, and all traffic between the dashboard and the ProofArrive API is sent over HTTPS.</p>
+    </div>
+
+    <h2 id="layout">Dashboard Layout</h2>
+    <p>Once signed in, every page shares the same three-part layout:</p>
+    <ul>
+      <li><strong>Left sidebar</strong> — navigation between pages, plus your profile card and a logout button at the bottom. It can be collapsed to icons only for more screen space.</li>
+      <li><strong>Top bar</strong> — page title, global filters (where applicable), and your currently selected context.</li>
+      <li><strong>Main content</strong> — the page you're on: charts, tables, cards, or detail views.</li>
+    </ul>
+
+    <div class="flow-diagram">
+    <svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 60 140 Q 200 60 360 140 T 660 140" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-dasharray="6,6"/>
+
+      <circle cx="60" cy="140" r="30" fill="#0a7ea4"/>
+      <text x="60" y="148" font-family="Arial" font-size="22" font-weight="bold" fill="#fff" text-anchor="middle">1</text>
+      <text x="60" y="195" font-family="Arial" font-size="11" font-weight="bold" fill="#0f172a" text-anchor="middle">Sign In</text>
+      <text x="60" y="210" font-family="Arial" font-size="10" fill="#64748b" text-anchor="middle">Open dashboard</text>
+      <text x="60" y="223" font-family="Arial" font-size="10" fill="#64748b" text-anchor="middle">in browser</text>
+
+      <circle cx="180" cy="85" r="30" fill="#0a7ea4"/>
+      <text x="180" y="93" font-family="Arial" font-size="22" font-weight="bold" fill="#fff" text-anchor="middle">2</text>
+      <text x="180" y="38" font-family="Arial" font-size="11" font-weight="bold" fill="#0f172a" text-anchor="middle">Monitor</text>
+      <text x="180" y="53" font-family="Arial" font-size="10" fill="#64748b" text-anchor="middle">Live KPIs,</text>
+      <text x="180" y="66" font-family="Arial" font-size="10" fill="#64748b" text-anchor="middle">charts, queues</text>
+
+      <circle cx="300" cy="140" r="30" fill="#0a7ea4"/>
+      <text x="300" y="148" font-family="Arial" font-size="22" font-weight="bold" fill="#fff" text-anchor="middle">3</text>
+      <text x="300" y="195" font-family="Arial" font-size="11" font-weight="bold" fill="#0f172a" text-anchor="middle">Drill In</text>
+      <text x="300" y="210" font-family="Arial" font-size="10" fill="#64748b" text-anchor="middle">Trip, vehicle</text>
+      <text x="300" y="223" font-family="Arial" font-size="10" fill="#64748b" text-anchor="middle">or center detail</text>
+
+      <circle cx="420" cy="85" r="30" fill="#0a7ea4"/>
+      <text x="420" y="93" font-family="Arial" font-size="22" font-weight="bold" fill="#fff" text-anchor="middle">4</text>
+      <text x="420" y="38" font-family="Arial" font-size="11" font-weight="bold" fill="#0f172a" text-anchor="middle">Act</text>
+      <text x="420" y="53" font-family="Arial" font-size="10" fill="#64748b" text-anchor="middle">Assign, manage,</text>
+      <text x="420" y="66" font-family="Arial" font-size="10" fill="#64748b" text-anchor="middle">regenerate QR</text>
+
+      <circle cx="540" cy="140" r="30" fill="#9C27B0"/>
+      <text x="540" y="148" font-family="Arial" font-size="22" font-weight="bold" fill="#fff" text-anchor="middle">5</text>
+      <text x="540" y="195" font-family="Arial" font-size="11" font-weight="bold" fill="#0f172a" text-anchor="middle">Report</text>
+      <text x="540" y="210" font-family="Arial" font-size="10" fill="#64748b" text-anchor="middle">Filter, export,</text>
+      <text x="540" y="223" font-family="Arial" font-size="10" fill="#64748b" text-anchor="middle">share insight</text>
+
+      <circle cx="660" cy="140" r="30" fill="#22C55E"/>
+      <text x="660" y="148" font-family="Arial" font-size="22" font-weight="bold" fill="#fff" text-anchor="middle">6</text>
+      <text x="660" y="195" font-family="Arial" font-size="11" font-weight="bold" fill="#0f172a" text-anchor="middle">Repeat</text>
+      <text x="660" y="210" font-family="Arial" font-size="10" fill="#64748b" text-anchor="middle">Continuous</text>
+      <text x="660" y="223" font-family="Arial" font-size="10" fill="#64748b" text-anchor="middle">visibility</text>
+
+      <text x="180" y="258" font-family="Arial" font-size="11" fill="#0a7ea4" font-weight="bold" text-anchor="middle">SEE THE WHOLE PICTURE</text>
+      <text x="540" y="258" font-family="Arial" font-size="11" fill="#0a7ea4" font-weight="bold" text-anchor="middle">TAKE INFORMED ACTION</text>
+    </svg>
+    </div>
+
+    <p>The sidebar is grouped into sections so related pages are easy to find:</p>
+
+    <table>
+      <thead>
+        <tr><th>Section</th><th>Pages</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Main</strong></td><td>Dashboard, Trips, Vehicles, Available Vehicles, Centers</td></tr>
+        <tr><td><strong>People</strong></td><td>Users</td></tr>
+        <tr><td><strong>Configuration</strong></td><td>Settings</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="dashboard">Dashboard</h2>
+    <p>The <strong>Dashboard</strong> is the page you land on after signing in. It's designed to answer the question <em>"what's happening right now?"</em> in a single glance.</p>
+
+    <p>At the top you'll find live <strong>KPI cards</strong>:</p>
+    <ul>
+      <li><strong>Trips started</strong> in the selected period</li>
+      <li><strong>Trips completed</strong> and overall <strong>completion rate</strong></li>
+      <li><strong>Vehicles in queue</strong> — loading or unloading right now</li>
+      <li><strong>Vehicles in transit</strong> between centers</li>
+    </ul>
+
+    <p>Below the KPIs, charts and tables break the numbers down:</p>
+    <ul>
+      <li>A <strong>trips over time</strong> area chart showing trends across the selected range.</li>
+      <li>A <strong>queue activity</strong> view per center, so you can see where the pressure is.</li>
+      <li>An <strong>active trips</strong> list with each trip's current phase.</li>
+      <li>A <strong>quick links</strong> panel for jumping to Vehicles, Trips, Centers, and Settings.</li>
+    </ul>
+
+    <p>Everything on this page respects the <strong>date range</strong> (today, last 7 days, this month) and optional <strong>center</strong> or <strong>vehicle</strong> filters at the top. Change a filter and every card, chart, and table updates together.</p>
+
+    <h2 id="trips">Trips</h2>
+    <p>The <strong>Trips</strong> page is the heart of the operation. Every vehicle movement recorded by the mobile app shows up here as a trip, with a full, auditable history.</p>
+
+    <p>From the trips table you can:</p>
+    <ul>
+      <li><strong>Search</strong> by plate number, center name, or trip ID.</li>
+      <li><strong>Filter</strong> by status (ongoing or completed), purpose (pickup or delivery), and creation date.</li>
+      <li><strong>Sort</strong> by most recent, longest running, or any other column.</li>
+      <li><strong>Click a trip</strong> to open its detail view.</li>
+    </ul>
+
+    <p>The <strong>trip detail</strong> view is where the full story lives. It shows:</p>
+    <ul>
+      <li>Origin and destination centers</li>
+      <li>The vehicle and who scanned it at each step</li>
+      <li>The current phase (loading, in transit, arrived, etc.)</li>
+      <li>A chronological <strong>event timeline</strong> — every scan, every state change, every timestamp, every location</li>
+    </ul>
+
+    <div class="callout tip">
+      <span class="title">Use the timeline for audits</span>
+      <p>If a customer asks "when did the truck actually leave?" or "how long was it loading?" — the trip timeline has the answer, captured automatically and verified by GPS at the moment it happened.</p>
+    </div>
+
+    <h2 id="vehicles">Vehicles</h2>
+    <p>The <strong>Vehicles</strong> page is your full fleet view. Each vehicle is listed with its plate number, current status, last known center, and last activity timestamp.</p>
+
+    <p>Status counts at the top give you a quick summary:</p>
+    <ul>
+      <li><strong>Waiting</strong>, <strong>Loading</strong>, <strong>Unloading</strong>, <strong>Ready to Exit</strong></li>
+      <li><strong>In Transit</strong>, <strong>Arrived</strong>, <strong>Completed</strong></li>
+      <li><strong>Available</strong>, <strong>Active</strong>, <strong>Idle</strong></li>
+    </ul>
+
+    <p>From a vehicle row, admins and managers can:</p>
+    <ul>
+      <li><strong>View or regenerate the QR code</strong> used for scanning in the field (see <a href="#qr">Vehicle QR Codes</a>).</li>
+      <li><strong>See the trip history</strong> for that specific vehicle.</li>
+      <li><strong>Update the status</strong> manually in rare cases where a scan was missed.</li>
+    </ul>
+
+    <h2 id="available">Available Vehicles</h2>
+    <p>The <strong>Available Vehicles</strong> page is a dispatcher's best friend. It shows only the vehicles that are currently <strong>free and ready to be assigned</strong>, in a grid view designed for quick, bulk action.</p>
+
+    <ul>
+      <li>Select one or many vehicles using checkboxes.</li>
+      <li>Pick the target <strong>center</strong> from a dropdown.</li>
+      <li>Confirm — the vehicles are assigned and the mobile app at that center will see them appear.</li>
+    </ul>
+
+    <p>This is the page to use when you need to quickly reposition vehicles before a busy shift or to balance load between centers.</p>
+
+    <h2 id="centers">Centers</h2>
+    <p>The <strong>Centers</strong> page lists every distribution or processing facility connected to ProofArrive. For each center, you can see:</p>
+    <ul>
+      <li>Its <strong>name</strong> and location</li>
+      <li>How many vehicles are currently <strong>loading</strong> or <strong>unloading</strong></li>
+      <li>How many are <strong>waiting in queue</strong></li>
+      <li>A quick <strong>queue summary</strong> to spot overloaded or idle centers</li>
+    </ul>
+    <p>Use this page when you need a facility-level view — for example, to understand whether congestion is cluster-wide or limited to a single site.</p>
+
+    <h2 id="users">Users</h2>
+    <p>The <strong>Users</strong> page lists everyone who has a ProofArrive account — field staff, dispatchers, managers, and admins. For each user you can see:</p>
+    <ul>
+      <li>Their <strong>name</strong> and <strong>username</strong></li>
+      <li>Their <strong>role</strong> (admin, manager, or standard user)</li>
+      <li>Their assigned <strong>center</strong>, if any</li>
+      <li>When they <strong>last logged in</strong></li>
+    </ul>
+    <p>You can search and sort the list, which makes it easy to audit account activity, identify inactive users, or find the right person to follow up with.</p>
+
+    <h2 id="settings">Settings</h2>
+    <p>The <strong>Settings</strong> page is where you manage your account and — if you're an admin or manager — configure parts of the system itself.</p>
+    <p>Every user can:</p>
+    <ul>
+      <li>View their <strong>profile details</strong> (name, username, role, assigned center).</li>
+      <li>Switch between <strong>light and dark mode</strong>.</li>
+      <li><strong>Log out</strong> of the dashboard.</li>
+    </ul>
+    <p>Admins and managers additionally get:</p>
+    <ul>
+      <li><strong>Vehicle group management</strong> — create, rename, or re-scope vehicle groups used for bulk operations.</li>
+      <li>Access to operational configuration not exposed to standard users.</li>
+    </ul>
+
+    <h2 id="roles">Roles &amp; Permissions</h2>
+    <p>ProofArrive uses three roles. Every account has exactly one. The role controls which actions appear in the interface — if you can't see a button, it's usually because your role doesn't have permission to use it.</p>
+
+    <table>
+      <thead>
+        <tr><th>Capability</th><th>Admin</th><th>Manager</th><th>User</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>View dashboard, trips, vehicles, centers</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Open trip timelines &amp; history</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Search &amp; filter the Users list</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Assign vehicles to centers (bulk)</td><td>✓</td><td>✓</td><td>—</td></tr>
+        <tr><td>Generate / regenerate vehicle QR codes</td><td>✓</td><td>✓</td><td>—</td></tr>
+        <tr><td>Manage vehicle groups</td><td>✓</td><td>✓</td><td>—</td></tr>
+        <tr><td>Manually update a vehicle's status</td><td>✓</td><td>✓</td><td>—</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout note">
+      <span class="title">One account, both apps</span>
+      <p>The same account works on the dashboard and the mobile app. A dispatcher can sit at the dashboard in the morning, then switch to the mobile app in the afternoon when they're out on the floor — no second login needed.</p>
+    </div>
+
+    <h2 id="qr">Vehicle QR Codes</h2>
+    <p>Every vehicle in ProofArrive has a unique <strong>QR code</strong>. That code is what the mobile app scans in the field to identify the vehicle and attach every event to the right trip.</p>
+
+    <p>From the Vehicles page, admins and managers can:</p>
+    <ol>
+      <li>Open a vehicle.</li>
+      <li>Click <strong>View QR Code</strong> to display it on screen for printing or reading.</li>
+      <li>Click <strong>Regenerate</strong> to issue a new code — the old one stops working immediately.</li>
+    </ol>
+
+    <div class="callout warning">
+      <span class="title">Regenerate with care</span>
+      <p>Regenerating a QR code is the right move if a sticker is lost, damaged, or compromised. But once you regenerate, the old sticker becomes useless — make sure you can print and apply the new one before the next trip.</p>
+    </div>
+
+    <h2 id="story">Worked Example</h2>
+    <p>Let's follow a single day on the dashboard to see how the pieces come together:</p>
+    <div class="story">
+    <p>It's 8:15 AM. <strong>Sophie</strong>, an operations manager, opens the dashboard on her laptop and signs in with her Malambi credentials. The KPI cards tell her there are already <strong>12 trips in progress</strong>, <strong>3 vehicles loading</strong>, and a completion rate of <strong>94%</strong> for the last 7 days. The trend chart shows today is tracking a bit above average.</p>
+    <p>She clicks the <strong>Centers</strong> page and notices <strong>Warehouse B</strong> has 6 vehicles in its unloading queue — twice what's normal for that hour. She opens the <strong>Available Vehicles</strong> page, selects four free trucks, and assigns them to <strong>Warehouse C</strong> instead to relieve pressure on B.</p>
+    <p>At 10:40, a customer calls asking about a shipment. Sophie jumps to <strong>Trips</strong>, searches the plate number, and opens the trip. The timeline shows the truck left Warehouse A at 07:12, passed through transit, arrived at Warehouse B at 10:05, and started unloading 8 minutes later. She reads the times straight back to the customer — no guesswork, no phone calls to the warehouse.</p>
+    <p>Later, a dispatcher reports a damaged QR sticker on one of the trucks. Sophie opens the <strong>Vehicles</strong> page, finds the vehicle, clicks <strong>Regenerate QR Code</strong>, prints the new code from her desk, and messages the dispatcher. Two minutes later, the truck is scannable again.</p>
+    <p>By the end of the shift, Sophie has never left her chair to find out what's happening in the field — and every decision she made is backed by data she can point to.</p>
+    </div>
+
+    <h2 id="statuses">Vehicle Statuses</h2>
+    <p>Vehicles in ProofArrive move through a well-defined set of states. The dashboard shows them with coloured badges so the current situation is obvious at a glance.</p>
+
+    <table>
+      <thead>
+        <tr><th>Status</th><th>What It Means</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Waiting</strong></td><td>Arrived at a center, not yet being worked on.</td></tr>
+        <tr><td><strong>Loading</strong></td><td>Currently being loaded with cargo at a center.</td></tr>
+        <tr><td><strong>Unloading</strong></td><td>Currently being unloaded at a center.</td></tr>
+        <tr><td><strong>Ready to Exit</strong></td><td>Work complete, cleared to leave the center.</td></tr>
+        <tr><td><strong>In Transit</strong></td><td>On the road between two centers.</td></tr>
+        <tr><td><strong>Arrived</strong></td><td>Reached its destination center, scan confirmed.</td></tr>
+        <tr><td><strong>Completed</strong></td><td>Trip fully finished — loaded, driven, delivered.</td></tr>
+        <tr><td><strong>Available</strong></td><td>Free and ready to be assigned to a new trip.</td></tr>
+        <tr><td><strong>Active</strong></td><td>Currently part of an ongoing trip (any step).</td></tr>
+        <tr><td><strong>Idle</strong></td><td>No recent activity — may need attention.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="glossary">Glossary</h2>
+    <table>
+      <thead>
+        <tr><th>Term</th><th>What It Means</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Dashboard</strong></td><td>The web app described in this guide — the control room for ProofArrive.</td></tr>
+        <tr><td><strong>Mobile app</strong></td><td>The companion phone app used by field staff to scan vehicles at centers.</td></tr>
+        <tr><td><strong>Trip</strong></td><td>A single vehicle journey between centers, with a full event timeline.</td></tr>
+        <tr><td><strong>Center</strong></td><td>A warehouse or distribution facility connected to ProofArrive.</td></tr>
+        <tr><td><strong>KPI</strong></td><td>A top-line metric shown as a card on the dashboard (trips, queue size, completion rate).</td></tr>
+        <tr><td><strong>Queue</strong></td><td>Vehicles currently waiting, loading, or unloading at a given center.</td></tr>
+        <tr><td><strong>QR code</strong></td><td>The unique sticker on each vehicle that the mobile app scans to identify it.</td></tr>
+        <tr><td><strong>Vehicle group</strong></td><td>A named collection of vehicles used for bulk operations and filtering.</td></tr>
+        <tr><td><strong>Role</strong></td><td>The permission level of an account: admin, manager, or standard user.</td></tr>
+        <tr><td><strong>Malambi credentials</strong></td><td>The single sign-on username and password used across Malambi systems, including ProofArrive.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="summary">Summary</h2>
+    <p>The ProofArrive dashboard turns scans in the field into answers on a screen:</p>
+    <ul>
+      <li><strong>See</strong> every trip, vehicle, and center at a glance.</li>
+      <li><strong>Drill in</strong> to a full timeline whenever a question comes up.</li>
+      <li><strong>Act</strong> on the data — assign vehicles, manage QR codes, update statuses.</li>
+      <li><strong>Trust</strong> the numbers, because each one is tied to a real, timestamped, GPS-verified scan.</li>
+    </ul>
+    <p>Fast for managers. Transparent for teams. Auditable for everyone.</p>
+
+    <div class="doc-footer">
+      <p><strong>ProofArrive Dashboard</strong> — proof of arrival, every trip, every time.</p>
+      <p>© Malambi · Admin Guide v1.0</p>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  // Highlight the active TOC item as user scrolls
+  (function() {
+    const links = document.querySelectorAll('.sidebar a[href^="#"]');
+    const sections = Array.from(links).map(a => {
+      const id = a.getAttribute('href').slice(1);
+      return { link: a, el: document.getElementById(id) };
+    }).filter(s => s.el);
+
+    function onScroll() {
+      const scrollY = window.scrollY + 100;
+      let current = sections[0];
+      for (const s of sections) {
+        if (s.el.offsetTop <= scrollY) current = s;
+      }
+      links.forEach(a => a.classList.remove('active'));
+      if (current) current.link.classList.add('active');
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+</script>
+
+</body>
+</html>
