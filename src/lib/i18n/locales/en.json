@@ -166,6 +166,19 @@
   "login": {
     "title": "Login",
     "description": "Enter your credentials to access the dashboard",
+    "welcomeTitle": "Welcome back",
+    "welcomeSubtitle": "Sign in to access your operations and trips in real time.",
+    "highlights": {
+      "realtime": "Real-time fleet status",
+      "qr": "QR codes as proof of arrival",
+      "secure": "JWT-secured, role-based access"
+    },
+    "usernamePlaceholder": "e.g. jane.doe",
+    "passwordPlaceholder": "Your password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "signingIn": "Signing in…",
+    "backHome": "Back to home",
     "username": "Username",
     "password": "Password",
     "submit": "Login",

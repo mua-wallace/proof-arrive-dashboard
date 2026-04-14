@@ -166,6 +166,19 @@
   "login": {
     "title": "Connexion",
     "description": "Entrez vos identifiants pour accéder au tableau de bord",
+    "welcomeTitle": "Bon retour",
+    "welcomeSubtitle": "Connectez-vous pour accéder à vos opérations et trajets en temps réel.",
+    "highlights": {
+      "realtime": "Statut de flotte en temps réel",
+      "qr": "QR codes comme preuve d'arrivée",
+      "secure": "Accès sécurisé par JWT et par rôle"
+    },
+    "usernamePlaceholder": "ex. jean.dupont",
+    "passwordPlaceholder": "Votre mot de passe",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe",
+    "signingIn": "Connexion…",
+    "backHome": "Retour à l'accueil",
     "username": "Nom d'utilisateur",
     "password": "Mot de passe",
     "submit": "Se connecter",
