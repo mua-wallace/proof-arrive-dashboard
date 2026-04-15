@@ -50,12 +50,14 @@
   },
   "nav": {
     "sectionMain": "Main",
+    "sectionAlerts": "Alerts",
     "sectionOther": "Other",
     "dashboard": "Dashboard",
     "trips": "Trips",
     "vehicles": "Vehicles",
     "availableVehicles": "Available vehicles",
     "centers": "Centers",
+    "incidents": "Incidents",
     "users": "Users",
     "settings": "Settings",
     "logout": "Logout",
@@ -80,7 +82,18 @@
     "ARRIVED": "Arrived",
     "COMPLETED": "Completed",
     "ACTIVE": "Active",
-    "IDLE": "Idle"
+    "IDLE": "Idle",
+    "BREAKDOWN": "Breakdown",
+    "ACCIDENT": "Accident",
+    "OVERDUE": "Overdue",
+    "TRANSFER": "Transfer in progress",
+    "AWAITING_REPAIR": "Awaiting repair",
+    "RESOLVED_RESUMED": "Resolved — resumed",
+    "CLOSED_TRANSFERRED": "Closed — transferred",
+    "CLOSED_RETURNED": "Closed — returned",
+    "ESCALATED": "No-show / Escalated",
+    "RESCUE": "Rescue trip",
+    "IN_PROGRESS": "In progress"
   },
   "trips": {
     "title": "Trips",
@@ -612,6 +625,258 @@
       "placeholder": "Password change, notifications, API keys, and other preferences can be added in this section.",
       "comingSoon": "Coming soon"
     }
+  },
+  "exceptions": {
+    "title": "Incidents & exceptions",
+    "subtitle": "Breakdowns, accidents, overdue trips and cargo transfers reported by staff",
+    "reportButton": "Report exception",
+    "types": {
+      "BREAKDOWN": "Vehicle breakdown",
+      "ACCIDENT": "Road accident",
+      "OVERDUE": "Overdue trip",
+      "TRANSFER": "Goods transfer"
+    },
+    "typeShort": {
+      "BREAKDOWN": "Breakdown",
+      "ACCIDENT": "Accident",
+      "OVERDUE": "Overdue",
+      "TRANSFER": "Transfer"
+    },
+    "severity": {
+      "MINOR": "Minor",
+      "MAJOR": "Major",
+      "CRITICAL": "Critical"
+    },
+    "banner": {
+      "activeCount_one": "{{count}} active exception requires attention",
+      "activeCount_other": "{{count}} active exceptions require attention",
+      "subtitle": "These trips have been flagged and need your action. Other trips are running normally.",
+      "viewAll": "View all exceptions →"
+    },
+    "kpi": {
+      "label": "Exceptions",
+      "needsAction": "Needs action now",
+      "allClear": "All clear"
+    },
+    "active": {
+      "heading": "Active exceptions",
+      "columnType": "Type",
+      "columnVehicle": "Vehicle",
+      "columnRoute": "Route",
+      "columnReported": "Reported",
+      "columnReportedBy": "Reported by",
+      "columnLocation": "Location",
+      "columnAction": "Action needed",
+      "manage": "Manage"
+    },
+    "incidents": {
+      "kpiBreakdowns": "Breakdowns",
+      "kpiAccidents": "Accidents",
+      "kpiTransfers": "Transfers",
+      "kpiResolvedToday": "Resolved today",
+      "filters": {
+        "all": "All",
+        "active": "Active",
+        "resolved": "Resolved",
+        "breakdown": "Breakdown",
+        "accident": "Accident",
+        "overdue": "Overdue",
+        "transfer": "Transfer"
+      },
+      "listTitle": "Incident log",
+      "listDescription": "{{count}} incidents — click a row to open the trip",
+      "empty": "No incidents match these filters",
+      "emptyHint": "When an exception is reported, it will appear here"
+    },
+    "filters": {
+      "exceptions": "Exceptions",
+      "breakdown": "Breakdown",
+      "accident": "Accident",
+      "overdue": "Overdue",
+      "transfer": "Transfer"
+    },
+    "actions": {
+      "addNote": "Add note",
+      "callDriver": "Call driver",
+      "markContacted": "Mark contacted",
+      "logCallAttempt": "Log call attempt",
+      "updateETA": "Update ETA",
+      "markRepaired": "Mark repaired",
+      "dispatchTechnician": "Dispatch technician",
+      "returnOrigin": "Return to origin",
+      "escalate": "Escalate",
+      "reportException": "Report exception",
+      "dispatchRescue": "Dispatch rescue vehicle",
+      "exportInsurance": "Export for insurance",
+      "comingSoon": "Coming soon"
+    },
+    "banners": {
+      "breakdownTitle": "Vehicle breakdown — {{location}}",
+      "accidentTitle": "Accident ({{severity}}) — {{location}}",
+      "overdueTitle": "Overdue — {{delta}} past expected arrival",
+      "transferTitle": "Goods transfer — {{location}}",
+      "reportedAt": "Reported {{time}} by {{by}}",
+      "technicianLine": "Technician {{name}} dispatched · ETA {{eta}}",
+      "incidentRef": "Incident ref: {{ref}}",
+      "injuriesYes": "Injuries reported",
+      "injuriesNo": "No injuries",
+      "cargoDamaged": "Cargo damaged",
+      "driveableYes": "Vehicle still driveable",
+      "driveableNo": "Vehicle not driveable"
+    },
+    "form": {
+      "reportTitle": "Report {{type}}",
+      "reportDescription": "This will create a permanent, timestamped exception record.",
+      "location": "Location",
+      "locationHint": "Road, km marker, landmark, or nearest town — free text",
+      "locationPlaceholder": "e.g. N4 highway, km 142, after Edea junction",
+      "description": "What happened",
+      "descriptionPlaceholder": "e.g. Engine overheated and vehicle stopped. Driver says coolant light was on.",
+      "driverPhone": "Driver phone",
+      "reportedBy": "Reported by",
+      "severity": "Severity",
+      "injuries": "Are there injuries?",
+      "cargoDamaged": "Is cargo damaged?",
+      "cargoDamageNotes": "Cargo damage description",
+      "driveable": "Is vehicle driveable?",
+      "policeRef": "Police report reference",
+      "policeRefOptional": "Police reference (optional)",
+      "yes": "Yes",
+      "no": "No",
+      "step": "Step {{current}} of {{total}}",
+      "stepBasic": "Basic details",
+      "stepStatus": "Status check",
+      "stepEvidence": "Evidence",
+      "photosNote": "Photo upload will be available in a future release.",
+      "submit": "Submit report",
+      "submitting": "Submitting…",
+      "back": "Back",
+      "next": "Next",
+      "required": "Required"
+    },
+    "dispatchTechnician": {
+      "title": "Dispatch technician",
+      "description": "Log that a technician has been sent to the scene.",
+      "name": "Technician name",
+      "phone": "Technician phone",
+      "eta": "Estimated arrival",
+      "etaPlaceholder": "e.g. 45 minutes, around 15:30",
+      "notes": "Notes",
+      "submit": "Log dispatch"
+    },
+    "markRepaired": {
+      "title": "Mark vehicle repaired",
+      "description": "Close the exception and resume the trip.",
+      "repairedBy": "Repaired by",
+      "descriptionLabel": "What was fixed",
+      "repairRef": "Repair reference (optional)",
+      "submit": "Mark repaired"
+    },
+    "logContact": {
+      "title": "Log call attempt",
+      "description": "Record an attempt to reach the driver.",
+      "outcome": "Outcome",
+      "outcomeAnswered": "Answered",
+      "outcomeNoAnswer": "No answer",
+      "outcomeVoicemail": "Voicemail",
+      "notes": "Notes",
+      "submit": "Log attempt"
+    },
+    "updateEta": {
+      "title": "Update expected arrival",
+      "description": "Set a new expected arrival time. This resets the overdue counter.",
+      "eta": "New expected arrival",
+      "notes": "Reason",
+      "submit": "Update ETA"
+    },
+    "returnOrigin": {
+      "title": "Return goods to origin",
+      "description": "Close the trip and send the vehicle back to the origin center.",
+      "reason": "Reason",
+      "submit": "Return to origin"
+    },
+    "escalate": {
+      "title": "Escalate exception",
+      "description": "Use when the driver cannot be reached or the situation requires management.",
+      "reason": "Escalation reason",
+      "reasonDriverUnreachable": "Driver unreachable",
+      "reasonSuspectedBreakdown": "Suspected breakdown",
+      "reasonSuspectedAccident": "Suspected accident",
+      "reasonUnknown": "Unknown",
+      "attempts": "Contact attempts made",
+      "notes": "Notes",
+      "actions": "Actions taken",
+      "actionPolice": "Reported to police",
+      "actionManagement": "Notified management",
+      "actionReplacement": "Dispatched replacement",
+      "policeRef": "Police report reference",
+      "submit": "Escalate"
+    },
+    "addNote": {
+      "title": "Add note",
+      "description": "Add a free-text update to the trip timeline.",
+      "text": "Note",
+      "submit": "Add note"
+    },
+    "detail": {
+      "summary": "Exception summary",
+      "location": "Location",
+      "reportedAt": "Reported at",
+      "reportedBy": "Reported by",
+      "issue": "Issue",
+      "technician": "Technician",
+      "technicianEta": "Technician ETA",
+      "severity": "Severity",
+      "injuries": "Injuries",
+      "cargo": "Cargo status",
+      "driveable": "Vehicle driveable",
+      "policeRef": "Police reference",
+      "expectedArrival": "Expected arrival",
+      "overdueBy": "Overdue by",
+      "contactAttempts": "Contact attempts",
+      "noContactAttempts": "No contact attempts yet",
+      "incidentRef": "Incident reference",
+      "status": "Status"
+    },
+    "timeline": {
+      "divider": "{{type}} reported — {{time}} — by {{by}}",
+      "note": "Note",
+      "callAnswered": "Call answered",
+      "callNoAnswer": "Call, no answer",
+      "callVoicemail": "Call, voicemail",
+      "technicianDispatched": "Technician dispatched"
+    },
+    "toasts": {
+      "reported": "Exception reported",
+      "reportedDesc": "The exception has been logged and the dispatcher notified.",
+      "repaired": "Marked as repaired",
+      "repairedDesc": "Trip is back in transit.",
+      "technicianDispatched": "Technician dispatched",
+      "contactLogged": "Contact attempt logged",
+      "etaUpdated": "Expected arrival updated",
+      "returned": "Returned to origin",
+      "escalated": "Exception escalated",
+      "noteAdded": "Note added"
+    }
+  },
+  "tripDetail": {
+    "back": "Back to trips",
+    "title": "Trip {{id}}",
+    "vehicle": "Vehicle",
+    "driver": "Driver",
+    "driverPhone": "Driver phone",
+    "origin": "Origin",
+    "destination": "Destination",
+    "purpose": "Purpose",
+    "startedAt": "Started at",
+    "phase": "Phase",
+    "notFound": "Trip not found",
+    "notFoundHint": "The trip may have been removed, or the link is invalid.",
+    "journeyStrip": "Journey",
+    "cargoCard": "Trip info",
+    "vehicleCard": "Vehicle & driver",
+    "timeline": "Event timeline",
+    "noEvents": "No events yet"
   },
   "comingSoon": {
     "arrivalsTitle": "Arrivals Coming Soon",

@@ -59,7 +59,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
-import { cn } from '@/lib/utils';
+import { cn, formatRelativeTime } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { QrCodeResponse, CurrentUser } from '@/api/dashboard';
 
@@ -95,6 +95,12 @@ export default function Vehicles() {
     notes: '',
   });
   const queryClient = useQueryClient();
+
+  const [, setNowTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setNowTick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -724,6 +730,10 @@ export default function Vehicles() {
     return map;
   }, [vehiclesListData?.data]);
 
+  const getLastSeenAt = (vehicle: Vehicle): string | null => {
+    return vehicle?.updatedAt ?? vehiclesByIdMap.get(vehicle.id)?.updatedAt ?? null;
+  };
+
   const getDisplayCenterName = (vehicle: Vehicle): string => {
     const fromVehicle =
       vehicle?.currentCenter?.name ?? (vehicle as any)?.current_center?.name;
@@ -788,23 +798,21 @@ export default function Vehicles() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Page title - compact */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Car className="h-7 w-7 text-primary" />
-          {t('vehicles.title')}
-        </h1>
-        <p className="text-muted-foreground text-sm mt-0.5">
-          {t('vehicles.subtitle')}
-        </p>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card/60 px-4 py-2.5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
+          <Car className="h-4 w-4 text-primary" />
+        </div>
+        <div className="min-w-0 leading-tight">
+          <h1 className="text-base font-bold tracking-tight">{t('vehicles.title')}</h1>
+          <p className="text-[11px] text-muted-foreground">{t('vehicles.subtitle')}</p>
+        </div>
       </div>
 
-      {/* Status summary - click to filter */}
       {statusSummary && (
         <section>
-          <p className="text-sm font-medium text-muted-foreground mb-3">{t('vehicles.fleetAtAGlance')}</p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('vehicles.fleetAtAGlance')}</p>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {(['available', 'in_garage', 'in_transit', 'in_processing', 'at_center', 'unavailable'] as VehicleStatus[]).map((status) => {
               const Icon = getStatusIcon(status);
               const count = statusSummary[status] || 0;
@@ -824,16 +832,16 @@ export default function Vehicles() {
                     }
                   }}
                   className={cn(
-                    'flex items-center gap-4 rounded-xl border bg-card p-4 text-left transition-all hover:shadow-md hover:border-primary/30',
-                    isActive && 'ring-2 ring-primary border-primary shadow-md'
+                    'flex items-center gap-2 rounded-lg border bg-card p-2.5 text-left transition-all hover:border-primary/30',
+                    isActive && 'ring-2 ring-primary border-primary'
                   )}
                 >
-                  <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', getStatusColor(status) + '/20')}>
-                    <Icon className={cn('h-5 w-5', getStatusColor(status).replace('bg-', 'text-'))} />
+                  <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-md', getStatusColor(status) + '/20')}>
+                    <Icon className={cn('h-4 w-4', getStatusColor(status).replace('bg-', 'text-'))} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-muted-foreground">{getStatusLabel(status)}</p>
-                    <p className="text-xl font-bold tabular-nums">{count}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{getStatusLabel(status)}</p>
+                    <p className="text-base font-bold leading-none tabular-nums">{count}</p>
                   </div>
                 </button>
               );
@@ -842,28 +850,26 @@ export default function Vehicles() {
         </section>
       )}
 
-      {/* Single toolbar: search + view + filters */}
-      <Card className="rounded-xl border p-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Card className="rounded-xl border p-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="relative min-w-[180px] flex-1">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="search"
               placeholder={t('vehicles.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 rounded-lg"
+              className="h-8 rounded-md pl-8 text-xs"
               aria-label={t('vehicles.searchAria')}
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground hidden sm:inline">{t('vehicles.view')}</span>
-            <div className="flex rounded-lg border bg-muted/50 p-0.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex rounded-md border bg-muted/50 p-0.5">
               <button
                 type="button"
                 onClick={() => setViewMode('groups')}
                 className={cn(
-                  'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                  'rounded px-2 py-1 text-[11px] font-medium transition-colors',
                   viewMode === 'groups' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
                 )}
               >
@@ -873,7 +879,7 @@ export default function Vehicles() {
                 type="button"
                 onClick={() => { setViewMode('status'); if (selectedStatus === 'all') setSelectedStatus('available'); }}
                 className={cn(
-                  'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                  'rounded px-2 py-1 text-[11px] font-medium transition-colors',
                   viewMode === 'status' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
                 )}
               >
@@ -883,7 +889,7 @@ export default function Vehicles() {
                 type="button"
                 onClick={() => setViewMode('center')}
                 className={cn(
-                  'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                  'rounded px-2 py-1 text-[11px] font-medium transition-colors',
                   viewMode === 'center' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
                 )}
               >
@@ -897,7 +903,7 @@ export default function Vehicles() {
                   id="status-filter"
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value as VehicleStatus | 'all')}
-                  className="h-9 w-[160px] rounded-lg"
+                  className="h-8 w-[140px] rounded-md text-xs"
                 >
                   <option value="all">{t('vehicles.allStatuses')}</option>
                   {(['available', 'in_garage', 'in_transit', 'in_processing', 'at_center', 'unavailable'] as VehicleStatus[]).map((s) => (
@@ -913,7 +919,7 @@ export default function Vehicles() {
                   id="center-filter"
                   value={selectedCenterId ?? ''}
                   onChange={(e) => setSelectedCenterId(e.target.value ? Number(e.target.value) : null)}
-                  className="h-9 w-[180px] rounded-lg"
+                  className="h-8 w-[160px] rounded-md text-xs"
                 >
                   <option value="">{t('vehicles.selectCenter')}</option>
                   {centersData?.data?.map((c: any) => (
@@ -1114,17 +1120,31 @@ export default function Vehicles() {
                                     {(() => {
                                       const centerLabel = getDisplayCenterName(vehicle);
                                       const hasCenter = centerLabel !== '—';
+                                      const lastSeenAt = getLastSeenAt(vehicle);
                                       return (
-                                        <div
-                                          className={cn(
-                                            'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium w-fit mt-1',
-                                            hasCenter
-                                              ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                                              : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
+                                        <div className="flex flex-col gap-1 mt-1">
+                                          <div
+                                            className={cn(
+                                              'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium w-fit',
+                                              hasCenter
+                                                ? 'bg-primary/10 text-primary dark:bg-primary/20'
+                                                : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
+                                            )}
+                                          >
+                                            <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                            <span>{hasCenter ? centerLabel : t('vehicles.notAssigned')}</span>
+                                          </div>
+                                          {lastSeenAt && (
+                                            <span
+                                              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"
+                                              title={new Date(lastSeenAt).toLocaleString()}
+                                            >
+                                              <Clock className="h-3 w-3 shrink-0" aria-hidden />
+                                              <span>
+                                                Last: {hasCenter ? centerLabel : '—'} · {formatRelativeTime(lastSeenAt)}
+                                              </span>
+                                            </span>
                                           )}
-                                        >
-                                          <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                                          <span>{hasCenter ? centerLabel : t('vehicles.notAssigned')}</span>
                                         </div>
                                       );
                                     })()}
@@ -1238,18 +1258,32 @@ export default function Vehicles() {
                               {(() => {
                                 const centerLabel = getDisplayCenterName(vehicle);
                                 const hasCenter = centerLabel !== '—';
+                                const lastSeenAt = getLastSeenAt(vehicle);
                                 return (
-                                  <span
-                                    className={cn(
-                                      'inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-xs font-medium',
-                                      hasCenter
-                                        ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                                        : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
+                                  <div className="flex flex-col gap-1 min-w-0">
+                                    <span
+                                      className={cn(
+                                        'inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-xs font-medium w-fit',
+                                        hasCenter
+                                          ? 'bg-primary/10 text-primary dark:bg-primary/20'
+                                          : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
+                                      )}
+                                    >
+                                      <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                      {hasCenter ? centerLabel : t('vehicles.notAssigned')}
+                                    </span>
+                                    {lastSeenAt && (
+                                      <span
+                                        className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"
+                                        title={new Date(lastSeenAt).toLocaleString()}
+                                      >
+                                        <Clock className="h-3 w-3 shrink-0" aria-hidden />
+                                        <span className="truncate">
+                                          Last: {hasCenter ? centerLabel : '—'} · {formatRelativeTime(lastSeenAt)}
+                                        </span>
+                                      </span>
                                     )}
-                                  >
-                                    <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                                    {hasCenter ? centerLabel : t('vehicles.notAssigned')}
-                                  </span>
+                                  </div>
                                 );
                               })()}
                             </TableCell>
@@ -1354,18 +1388,32 @@ export default function Vehicles() {
                               {(() => {
                                 const centerLabel = getDisplayCenterName(vehicle);
                                 const hasCenter = centerLabel !== '—';
+                                const lastSeenAt = getLastSeenAt(vehicle);
                                 return (
-                                  <span
-                                    className={cn(
-                                      'inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-xs font-medium',
-                                      hasCenter
-                                        ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                                        : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
+                                  <div className="flex flex-col gap-1 min-w-0">
+                                    <span
+                                      className={cn(
+                                        'inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-xs font-medium w-fit',
+                                        hasCenter
+                                          ? 'bg-primary/10 text-primary dark:bg-primary/20'
+                                          : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
+                                      )}
+                                    >
+                                      <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                      {hasCenter ? centerLabel : t('vehicles.notAssigned')}
+                                    </span>
+                                    {lastSeenAt && (
+                                      <span
+                                        className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"
+                                        title={new Date(lastSeenAt).toLocaleString()}
+                                      >
+                                        <Clock className="h-3 w-3 shrink-0" aria-hidden />
+                                        <span className="truncate">
+                                          Last: {hasCenter ? centerLabel : '—'} · {formatRelativeTime(lastSeenAt)}
+                                        </span>
+                                      </span>
                                     )}
-                                  >
-                                    <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                                    {hasCenter ? centerLabel : t('vehicles.notAssigned')}
-                                  </span>
+                                  </div>
                                 );
                               })()}
                             </TableCell>

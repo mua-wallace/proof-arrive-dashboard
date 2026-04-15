@@ -50,12 +50,14 @@
   },
   "nav": {
     "sectionMain": "Principal",
+    "sectionAlerts": "Alertes",
     "sectionOther": "Autres",
     "dashboard": "Tableau de bord",
     "trips": "Trajets",
     "vehicles": "Véhicules",
     "availableVehicles": "Véhicules disponibles",
     "centers": "Centres",
+    "incidents": "Incidents",
     "users": "Utilisateurs",
     "settings": "Paramètres",
     "logout": "Déconnexion",
@@ -80,7 +82,18 @@
     "ARRIVED": "Arrivé",
     "COMPLETED": "Terminé",
     "ACTIVE": "Actif",
-    "IDLE": "Inactif"
+    "IDLE": "Inactif",
+    "BREAKDOWN": "Panne",
+    "ACCIDENT": "Accident",
+    "OVERDUE": "En retard",
+    "TRANSFER": "Transfert en cours",
+    "AWAITING_REPAIR": "En attente de réparation",
+    "RESOLVED_RESUMED": "Résolu — repris",
+    "CLOSED_TRANSFERRED": "Clôturé — transféré",
+    "CLOSED_RETURNED": "Clôturé — retourné",
+    "ESCALATED": "Disparu / Escaladé",
+    "RESCUE": "Trajet de secours",
+    "IN_PROGRESS": "En cours"
   },
   "trips": {
     "title": "Trajets",
@@ -612,6 +625,258 @@
       "placeholder": "Changement de mot de passe, notifications, clés API et autres préférences pourront être ajoutés dans cette section.",
       "comingSoon": "Bientôt disponible"
     }
+  },
+  "exceptions": {
+    "title": "Incidents & exceptions",
+    "subtitle": "Pannes, accidents, trajets en retard et transferts de marchandises signalés par le personnel",
+    "reportButton": "Signaler une exception",
+    "types": {
+      "BREAKDOWN": "Panne du véhicule",
+      "ACCIDENT": "Accident de la route",
+      "OVERDUE": "Trajet en retard",
+      "TRANSFER": "Transfert de marchandises"
+    },
+    "typeShort": {
+      "BREAKDOWN": "Panne",
+      "ACCIDENT": "Accident",
+      "OVERDUE": "En retard",
+      "TRANSFER": "Transfert"
+    },
+    "severity": {
+      "MINOR": "Mineur",
+      "MAJOR": "Majeur",
+      "CRITICAL": "Critique"
+    },
+    "banner": {
+      "activeCount_one": "{{count}} exception active nécessite votre attention",
+      "activeCount_other": "{{count}} exceptions actives nécessitent votre attention",
+      "subtitle": "Ces trajets ont été signalés et nécessitent une action. Les autres trajets se déroulent normalement.",
+      "viewAll": "Voir toutes les exceptions →"
+    },
+    "kpi": {
+      "label": "Exceptions",
+      "needsAction": "Action requise",
+      "allClear": "Tout va bien"
+    },
+    "active": {
+      "heading": "Exceptions actives",
+      "columnType": "Type",
+      "columnVehicle": "Véhicule",
+      "columnRoute": "Itinéraire",
+      "columnReported": "Signalé",
+      "columnReportedBy": "Signalé par",
+      "columnLocation": "Lieu",
+      "columnAction": "Action requise",
+      "manage": "Gérer"
+    },
+    "incidents": {
+      "kpiBreakdowns": "Pannes",
+      "kpiAccidents": "Accidents",
+      "kpiTransfers": "Transferts",
+      "kpiResolvedToday": "Résolus aujourd'hui",
+      "filters": {
+        "all": "Tous",
+        "active": "Actifs",
+        "resolved": "Résolus",
+        "breakdown": "Panne",
+        "accident": "Accident",
+        "overdue": "En retard",
+        "transfer": "Transfert"
+      },
+      "listTitle": "Journal des incidents",
+      "listDescription": "{{count}} incidents — cliquez sur une ligne pour ouvrir le trajet",
+      "empty": "Aucun incident ne correspond à ces filtres",
+      "emptyHint": "Lorsqu'une exception est signalée, elle apparaîtra ici"
+    },
+    "filters": {
+      "exceptions": "Exceptions",
+      "breakdown": "Panne",
+      "accident": "Accident",
+      "overdue": "En retard",
+      "transfer": "Transfert"
+    },
+    "actions": {
+      "addNote": "Ajouter une note",
+      "callDriver": "Appeler le chauffeur",
+      "markContacted": "Marquer comme contacté",
+      "logCallAttempt": "Enregistrer une tentative d'appel",
+      "updateETA": "Modifier l'ETA",
+      "markRepaired": "Marquer réparé",
+      "dispatchTechnician": "Envoyer un technicien",
+      "returnOrigin": "Retourner à l'origine",
+      "escalate": "Escalader",
+      "reportException": "Signaler une exception",
+      "dispatchRescue": "Envoyer un véhicule de secours",
+      "exportInsurance": "Exporter pour l'assurance",
+      "comingSoon": "Bientôt disponible"
+    },
+    "banners": {
+      "breakdownTitle": "Panne du véhicule — {{location}}",
+      "accidentTitle": "Accident ({{severity}}) — {{location}}",
+      "overdueTitle": "En retard — {{delta}} après l'arrivée prévue",
+      "transferTitle": "Transfert de marchandises — {{location}}",
+      "reportedAt": "Signalé {{time}} par {{by}}",
+      "technicianLine": "Technicien {{name}} envoyé · ETA {{eta}}",
+      "incidentRef": "Référence incident : {{ref}}",
+      "injuriesYes": "Blessés signalés",
+      "injuriesNo": "Aucun blessé",
+      "cargoDamaged": "Marchandises endommagées",
+      "driveableYes": "Véhicule roulant",
+      "driveableNo": "Véhicule non roulant"
+    },
+    "form": {
+      "reportTitle": "Signaler : {{type}}",
+      "reportDescription": "Ceci créera un enregistrement d'exception horodaté et permanent.",
+      "location": "Lieu",
+      "locationHint": "Route, kilomètre, repère ou ville la plus proche — texte libre",
+      "locationPlaceholder": "ex. N4, km 142, après le carrefour d'Edea",
+      "description": "Ce qui s'est passé",
+      "descriptionPlaceholder": "ex. Le moteur a surchauffé, le véhicule s'est arrêté…",
+      "driverPhone": "Téléphone du chauffeur",
+      "reportedBy": "Signalé par",
+      "severity": "Gravité",
+      "injuries": "Y a-t-il des blessés ?",
+      "cargoDamaged": "Les marchandises sont-elles endommagées ?",
+      "cargoDamageNotes": "Description des dommages",
+      "driveable": "Le véhicule est-il roulant ?",
+      "policeRef": "Référence du rapport de police",
+      "policeRefOptional": "Référence police (optionnel)",
+      "yes": "Oui",
+      "no": "Non",
+      "step": "Étape {{current}} sur {{total}}",
+      "stepBasic": "Informations de base",
+      "stepStatus": "Vérification de l'état",
+      "stepEvidence": "Éléments de preuve",
+      "photosNote": "Le téléchargement de photos sera disponible dans une prochaine version.",
+      "submit": "Envoyer le rapport",
+      "submitting": "Envoi…",
+      "back": "Retour",
+      "next": "Suivant",
+      "required": "Obligatoire"
+    },
+    "dispatchTechnician": {
+      "title": "Envoyer un technicien",
+      "description": "Enregistrez qu'un technicien a été envoyé sur place.",
+      "name": "Nom du technicien",
+      "phone": "Téléphone du technicien",
+      "eta": "Arrivée estimée",
+      "etaPlaceholder": "ex. 45 minutes, vers 15h30",
+      "notes": "Notes",
+      "submit": "Enregistrer"
+    },
+    "markRepaired": {
+      "title": "Marquer véhicule réparé",
+      "description": "Clôturez l'exception et reprenez le trajet.",
+      "repairedBy": "Réparé par",
+      "descriptionLabel": "Ce qui a été réparé",
+      "repairRef": "Référence de réparation (optionnel)",
+      "submit": "Marquer réparé"
+    },
+    "logContact": {
+      "title": "Enregistrer une tentative d'appel",
+      "description": "Consignez une tentative d'appel du chauffeur.",
+      "outcome": "Résultat",
+      "outcomeAnswered": "A répondu",
+      "outcomeNoAnswer": "Pas de réponse",
+      "outcomeVoicemail": "Messagerie vocale",
+      "notes": "Notes",
+      "submit": "Enregistrer la tentative"
+    },
+    "updateEta": {
+      "title": "Modifier l'arrivée prévue",
+      "description": "Définissez une nouvelle heure d'arrivée prévue. Le compteur de retard est réinitialisé.",
+      "eta": "Nouvelle arrivée prévue",
+      "notes": "Motif",
+      "submit": "Mettre à jour l'ETA"
+    },
+    "returnOrigin": {
+      "title": "Retourner les marchandises à l'origine",
+      "description": "Clôturez le trajet et renvoyez le véhicule au centre d'origine.",
+      "reason": "Motif",
+      "submit": "Retourner à l'origine"
+    },
+    "escalate": {
+      "title": "Escalader l'exception",
+      "description": "À utiliser lorsque le chauffeur est injoignable ou que la situation nécessite un management.",
+      "reason": "Motif d'escalade",
+      "reasonDriverUnreachable": "Chauffeur injoignable",
+      "reasonSuspectedBreakdown": "Panne suspectée",
+      "reasonSuspectedAccident": "Accident suspecté",
+      "reasonUnknown": "Inconnu",
+      "attempts": "Tentatives de contact",
+      "notes": "Notes",
+      "actions": "Actions entreprises",
+      "actionPolice": "Signalé à la police",
+      "actionManagement": "Management notifié",
+      "actionReplacement": "Véhicule de remplacement envoyé",
+      "policeRef": "Référence du rapport de police",
+      "submit": "Escalader"
+    },
+    "addNote": {
+      "title": "Ajouter une note",
+      "description": "Ajoutez une note libre à la chronologie du trajet.",
+      "text": "Note",
+      "submit": "Ajouter la note"
+    },
+    "detail": {
+      "summary": "Résumé de l'exception",
+      "location": "Lieu",
+      "reportedAt": "Signalé le",
+      "reportedBy": "Signalé par",
+      "issue": "Problème",
+      "technician": "Technicien",
+      "technicianEta": "ETA technicien",
+      "severity": "Gravité",
+      "injuries": "Blessés",
+      "cargo": "État des marchandises",
+      "driveable": "Véhicule roulant",
+      "policeRef": "Référence police",
+      "expectedArrival": "Arrivée prévue",
+      "overdueBy": "En retard de",
+      "contactAttempts": "Tentatives de contact",
+      "noContactAttempts": "Aucune tentative de contact",
+      "incidentRef": "Référence incident",
+      "status": "Statut"
+    },
+    "timeline": {
+      "divider": "{{type}} signalé — {{time}} — par {{by}}",
+      "note": "Note",
+      "callAnswered": "Appel, répondu",
+      "callNoAnswer": "Appel, pas de réponse",
+      "callVoicemail": "Appel, messagerie vocale",
+      "technicianDispatched": "Technicien envoyé"
+    },
+    "toasts": {
+      "reported": "Exception signalée",
+      "reportedDesc": "L'exception a été enregistrée et le dispatcher notifié.",
+      "repaired": "Marqué comme réparé",
+      "repairedDesc": "Le trajet reprend.",
+      "technicianDispatched": "Technicien envoyé",
+      "contactLogged": "Tentative enregistrée",
+      "etaUpdated": "Arrivée prévue mise à jour",
+      "returned": "Retourné à l'origine",
+      "escalated": "Exception escaladée",
+      "noteAdded": "Note ajoutée"
+    }
+  },
+  "tripDetail": {
+    "back": "Retour aux trajets",
+    "title": "Trajet {{id}}",
+    "vehicle": "Véhicule",
+    "driver": "Chauffeur",
+    "driverPhone": "Téléphone du chauffeur",
+    "origin": "Origine",
+    "destination": "Destination",
+    "purpose": "Objectif",
+    "startedAt": "Commencé le",
+    "phase": "Phase",
+    "notFound": "Trajet introuvable",
+    "notFoundHint": "Le trajet a peut-être été supprimé, ou le lien est invalide.",
+    "journeyStrip": "Parcours",
+    "cargoCard": "Informations trajet",
+    "vehicleCard": "Véhicule & chauffeur",
+    "timeline": "Chronologie des événements",
+    "noEvents": "Aucun événement pour l'instant"
   },
   "comingSoon": {
     "arrivalsTitle": "Arrivées — bientôt",

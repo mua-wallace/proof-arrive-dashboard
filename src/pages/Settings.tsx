@@ -186,35 +186,22 @@ export default function Settings() {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Hero header */}
-      <div className="relative rounded-xl border bg-gradient-to-br from-card to-muted/30 p-6 sm:p-8 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50" />
-        <div className="absolute right-4 top-4 text-muted-foreground/40">
-          <Sparkles className="h-16 w-16" />
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card/60 px-4 py-2.5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
+          <SettingsIcon className="h-4 w-4 text-primary" />
         </div>
-        <div className="relative flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <SettingsIcon className="h-7 w-7" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                {t('settings.title')}
-              </h1>
-              <p className="text-muted-foreground text-sm sm:text-base">
-                {t('settings.subtitle')}
-              </p>
-            </div>
-          </div>
+        <div className="min-w-0 leading-tight">
+          <h1 className="text-base font-bold tracking-tight">{t('settings.title')}</h1>
+          <p className="text-[11px] text-muted-foreground">{t('settings.subtitle')}</p>
         </div>
       </div>
 
       {isLoading ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-            <p className="text-sm text-muted-foreground">{t('settings.loadingProfile')}</p>
+          <CardContent className="flex flex-col items-center justify-center py-10">
+            <Loader2 className="mb-2 h-6 w-6 animate-spin text-primary" />
+            <p className="text-xs text-muted-foreground">{t('settings.loadingProfile')}</p>
           </CardContent>
         </Card>
       ) : error ? (
@@ -226,21 +213,21 @@ export default function Settings() {
           </AlertDescription>
         </Alert>
       ) : currentUser ? (
-        <div className="grid gap-6 lg:grid-cols-[400px_1fr]">
+        <div className="grid gap-3 lg:grid-cols-[340px_1fr]">
           <UserDetailsCard user={currentUser} t={t} />
-          <div className="space-y-6">
+          <div className="flex flex-col gap-3">
             {canManageGroups && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Car className="h-5 w-5 text-primary" />
+                <CardHeader className="p-3 pb-2">
+                  <CardTitle className="flex items-center gap-1.5 text-sm font-semibold">
+                    <Car className="h-3.5 w-3.5 text-primary" />
                     {t('settings.groups.title')}
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-[11px]">
                     {t('settings.groups.description')}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3 p-3 pt-0">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="groups-node">{t('settings.groups.node')}</Label>

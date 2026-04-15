@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -14,15 +14,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
-import {
   Table,
   TableBody,
   TableCell,
@@ -36,31 +27,48 @@ import {
 import {
   ArrowRightLeft,
   Truck,
-  MapPin,
-  Calendar,
   Filter,
   ChevronLeft,
   ChevronRight,
   Loader2,
   Eye,
-  Clock,
-  Building2,
 } from 'lucide-react';
-import { formatDate, formatNumber } from '@/lib/utils';
+import { formatNumber } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { getStatusTheme, getStatusStyle } from '@/lib/status-theme';
+import { useExceptionsStore, selectActiveExceptionForTrip } from '@/stores/exceptions.store';
+import { ACTIVE_STATUSES, type ExceptionType } from '@/types/exceptions';
+import { ExceptionBadge } from '@/components/exceptions/ExceptionBadge';
 
 export default function Trips() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(() => parseInt(searchParams.get('page') || '1', 10));
   const limit = 20;
+  const [exceptionChip, setExceptionChip] = useState<ExceptionType | 'EXCEPTIONS' | null>(null);
+  const allExceptions = useExceptionsStore((s) => s.exceptions);
+  const activeExceptionsCount = allExceptions.filter((e) =>
+    ACTIVE_STATUSES.includes(e.status),
+  ).length;
+  const countByType = useMemo(() => {
+    const counts: Record<ExceptionType, number> = {
+      BREAKDOWN: 0,
+      ACCIDENT: 0,
+      OVERDUE: 0,
+      TRANSFER: 0,
+    };
+    for (const e of allExceptions) {
+      if (ACTIVE_STATUSES.includes(e.status)) counts[e.type] += 1;
+    }
+    return counts;
+  }, [allExceptions]);
   const [status, setStatus] = useState<'ONGOING' | 'COMPLETED' | ''>(() => (searchParams.get('status') as 'ONGOING' | 'COMPLETED') || '');
   const [purpose, setPurpose] = useState<'DELIVERY' | 'PICKUP' | ''>(() => (searchParams.get('purpose') as 'DELIVERY' | 'PICKUP') || '');
   const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [createdAt, setCreatedAt] = useState(() => searchParams.get('createdAt') || '');
-  const [detailTripId, setDetailTripId] = useState<number | null>(null);
   const [showUncompleted, setShowUncompleted] = useState(
     () => searchParams.get('view') === 'uncompleted'
   );
@@ -141,41 +149,27 @@ export default function Trips() {
     }
   }
 
-  const { data: detailTrip, isLoading: detailLoading, error: detailError, refetch: refetchDetail } = useQuery({
-    queryKey: ['trip', detailTripId],
-    queryFn: () => dashboardApi.getTripById(detailTripId!, 'vehicle,originCenter,destinationCenter,events'),
-    enabled: detailTripId != null,
-    retry: 1,
-  });
-
-  const { data: centersDataForDetail } = useQuery({
-    queryKey: ['centers', 'list'],
-    queryFn: () => dashboardApi.getCenters({ limit: 500 }),
-    enabled: detailTripId != null,
-  });
-
-  const centersList = Array.isArray(centersDataForDetail?.data) ? centersDataForDetail.data : [];
-  const getCenterName = (centerId: number | undefined): string => {
-    if (centerId == null) return '—';
-    const fromTrip =
-      detailTrip?.originCenterId === centerId
-        ? detailTrip?.originCenter
-        : detailTrip?.destinationCenterId === centerId
-          ? detailTrip?.destinationCenter
-          : null;
-    const name = (fromTrip as any)?.name ?? (fromTrip as any)?.label ?? (fromTrip as any)?.centerName;
-    if (name) return name;
-    const center = centersList.find((c: any) => c.id === centerId || c.centerId === centerId);
-    return (center?.name ?? center?.label ?? center?.centerName) || `Center ${centerId}`;
-  };
-
   const activeData = showUncompleted ? pendingData : data;
   const activeLoading = showUncompleted ? pendingLoading : isLoading;
   const activeFetching = showUncompleted ? pendingFetching : isFetching;
   const activeError = showUncompleted ? pendingError : error;
   const activeRefetch = showUncompleted ? refetchPending : refetch;
 
-  const trips: Trip[] = Array.isArray(activeData?.data) ? activeData.data : [];
+  const trips: Trip[] = useMemo(
+    () => (Array.isArray(activeData?.data) ? (activeData.data as Trip[]) : []),
+    [activeData],
+  );
+
+  const filteredTrips = useMemo(() => {
+    if (!exceptionChip) return trips;
+    return trips.filter((trip) => {
+      const exc = selectActiveExceptionForTrip(allExceptions, trip.id);
+      if (!exc) return false;
+      if (exceptionChip === 'EXCEPTIONS') return true;
+      return exc.type === exceptionChip;
+    });
+  }, [trips, exceptionChip, allExceptions]);
+
   const meta = activeData?.meta;
   const totalPages = showUncompleted ? 1 : meta?.totalPages ?? 1;
   const totalItems = meta?.totalItems ?? 0;
@@ -192,33 +186,75 @@ export default function Trips() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-2xl border bg-card/50 px-6 py-5">
-        <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15">
-            <ArrowRightLeft className="h-6 w-6 text-primary" />
-          </div>
-          {t('trips.title')}
-        </h1>
-        <p className="mt-2 text-muted-foreground">
-          {t('trips.subtitle')}
-        </p>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card/60 px-4 py-2.5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
+          <ArrowRightLeft className="h-4 w-4 text-primary" />
+        </div>
+        <div className="min-w-0 leading-tight">
+          <h1 className="text-base font-bold tracking-tight">{t('trips.title')}</h1>
+          <p className="text-[11px] text-muted-foreground">{t('trips.subtitle')}</p>
+        </div>
+        <div className="ml-auto flex flex-wrap gap-1">
+          {(
+            [
+              { key: null, label: t('common.all'), count: null },
+              { key: 'EXCEPTIONS', label: t('exceptions.filters.exceptions'), count: activeExceptionsCount },
+              { key: 'BREAKDOWN', label: t('exceptions.filters.breakdown'), count: countByType.BREAKDOWN },
+              { key: 'ACCIDENT', label: t('exceptions.filters.accident'), count: countByType.ACCIDENT },
+              { key: 'OVERDUE', label: t('exceptions.filters.overdue'), count: countByType.OVERDUE },
+            ] as Array<{
+              key: ExceptionType | 'EXCEPTIONS' | null;
+              label: string;
+              count: number | null;
+            }>
+          ).map((chip) => {
+            const active = exceptionChip === chip.key;
+            return (
+              <button
+                key={String(chip.key)}
+                type="button"
+                onClick={() => setExceptionChip(chip.key)}
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition',
+                  active
+                    ? 'border-red-500 bg-red-500 text-white'
+                    : 'border-input bg-background text-muted-foreground hover:bg-muted',
+                )}
+              >
+                {chip.label}
+                {chip.count != null && chip.count > 0 && (
+                  <span
+                    className={cn(
+                      'rounded-full px-1 text-[9px] tabular-nums',
+                      active ? 'bg-white/20' : 'bg-red-500 text-white',
+                    )}
+                  >
+                    {chip.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <Card className="overflow-hidden rounded-2xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
+      <Card className="overflow-hidden rounded-xl">
+        <CardHeader className="p-3 pb-2">
+          <CardTitle className="flex items-center gap-1.5 text-sm font-semibold">
+            <Filter className="h-3.5 w-3.5" />
             {t('trips.filters.title')}
           </CardTitle>
-          <CardDescription>{t('trips.filters.description')}</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <div className="space-y-2">
-              <Label htmlFor="status">{t('trips.filters.status')}</Label>
+        <CardContent className="p-3 pt-0">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="space-y-1">
+              <Label htmlFor="status" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {t('trips.filters.status')}
+              </Label>
               <Select
                 id="status"
+                className="h-8 text-xs"
                 value={status || 'all'}
                 onChange={(e) => {
                   const v = e.target.value;
@@ -231,10 +267,13 @@ export default function Trips() {
                 <option value="COMPLETED">{t('trips.status.completed')}</option>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="purpose">{t('trips.filters.purpose')}</Label>
+            <div className="space-y-1">
+              <Label htmlFor="purpose" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {t('trips.filters.purpose')}
+              </Label>
               <Select
                 id="purpose"
+                className="h-8 text-xs"
                 value={purpose || 'all'}
                 onChange={(e) => {
                   const v = e.target.value;
@@ -247,11 +286,14 @@ export default function Trips() {
                 <option value="PICKUP">{t('trips.purpose.pickup')}</option>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="createdAt">{t('trips.filters.date')}</Label>
+            <div className="space-y-1">
+              <Label htmlFor="createdAt" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {t('trips.filters.date')}
+              </Label>
               <Input
                 id="createdAt"
                 type="date"
+                className="h-8 text-xs"
                 value={createdAt}
                 onChange={(e) => {
                   setCreatedAt(e.target.value);
@@ -259,16 +301,18 @@ export default function Trips() {
                 }}
               />
             </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="search">{t('trips.filters.search')}</Label>
+            <div className="space-y-1 sm:col-span-2">
+              <Label htmlFor="search" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {t('trips.filters.search')}
+              </Label>
               <div className="relative">
-                <Truck className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Truck className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="search"
                   placeholder={t('trips.filters.searchPlaceholder')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
+                  className="h-8 pl-8 text-xs"
                 />
               </div>
             </div>
@@ -276,148 +320,175 @@ export default function Trips() {
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden rounded-2xl">
-        <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <CardTitle>{showUncompleted ? t('trips.uncompletedTitle') : t('trips.listTitle')}</CardTitle>
-              <CardDescription>
-                {showUncompleted
-                  ? meta
-                    ? t('trips.uncompletedDescription', { count: trips.length })
-                    : t('common.loading')
-                  : meta
-                    ? t('trips.listDescription', {
-                        from: (page - 1) * limit + 1,
-                        to: Math.min(page * limit, totalItems),
-                        total: formatNumber(totalItems),
-                      })
-                    : t('common.loading')}
-              </CardDescription>
-            </div>
-            {showUncompleted && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="whitespace-nowrap"
-                onClick={() => setShowUncompleted(false)}
-              >
-                {t('trips.showAll')}
-              </Button>
-            )}
+      <Card className="overflow-hidden rounded-xl">
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-3 pb-2">
+          <div className="min-w-0">
+            <CardTitle className="text-sm font-semibold">
+              {showUncompleted ? t('trips.uncompletedTitle') : t('trips.listTitle')}
+            </CardTitle>
+            <CardDescription className="text-[11px]">
+              {showUncompleted
+                ? meta
+                  ? t('trips.uncompletedDescription', { count: trips.length })
+                  : t('common.loading')
+                : meta
+                  ? t('trips.listDescription', {
+                      from: (page - 1) * limit + 1,
+                      to: Math.min(page * limit, totalItems),
+                      total: formatNumber(totalItems),
+                    })
+                  : t('common.loading')}
+            </CardDescription>
           </div>
+          {showUncompleted && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 whitespace-nowrap text-xs"
+              onClick={() => setShowUncompleted(false)}
+            >
+              {t('trips.showAll')}
+            </Button>
+          )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {apiErrorMessage ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <p className="font-medium text-destructive mb-1">
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <p className="mb-1 text-xs font-medium text-destructive">
                 {showUncompleted ? t('trips.loadErrorUncompleted') : t('trips.loadError')}
               </p>
-              <p className="text-sm text-muted-foreground mb-4 max-w-md">{apiErrorMessage}</p>
-              <Button variant="outline" onClick={() => activeRefetch()}>
+              <p className="mb-2 max-w-md text-[11px] text-muted-foreground">{apiErrorMessage}</p>
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => activeRefetch()}>
                 {t('common.tryAgain')}
               </Button>
             </div>
           ) : activeLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : !trips.length ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <ArrowRightLeft className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="font-medium text-muted-foreground">
+          ) : !filteredTrips.length ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <ArrowRightLeft className="mb-2 h-6 w-6 text-muted-foreground" />
+              <p className="text-xs font-medium text-muted-foreground">
                 {showUncompleted ? t('trips.emptyUncompleted') : t('trips.empty')}
               </p>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
                 {showUncompleted ? t('trips.emptyUncompletedHint') : t('trips.emptyHint')}
               </p>
             </div>
           ) : (
             <>
-              <div className="rounded-md border">
+              <div className="border-t">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('trips.columns.vehicle')}</TableHead>
-                      <TableHead>{t('trips.columns.origin')}</TableHead>
-                      <TableHead>{t('trips.columns.started')}</TableHead>
-                      <TableHead>{t('trips.columns.destination')}</TableHead>
-                      <TableHead>{t('trips.columns.purpose')}</TableHead>
-                      <TableHead>{t('trips.columns.phaseStatus')}</TableHead>
-                      <TableHead className="w-[80px]">{t('trips.columns.actions')}</TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">{t('trips.columns.vehicle')}</TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">{t('trips.columns.origin')}</TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">{t('trips.columns.started')}</TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">{t('trips.columns.destination')}</TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">{t('trips.columns.purpose')}</TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">{t('trips.columns.phaseStatus')}</TableHead>
+                      <TableHead className="h-8 w-[72px] py-1 text-[10px]">{t('trips.columns.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {trips.map((trip) => (
-                      <TableRow key={trip.id}>
-                        <TableCell className="font-medium">
-                          {trip.vehicle?.plate
-                            ?? vehiclePlateById.get(trip.vehicleId)
-                            ?? `#${trip.vehicleId}`}
-                        </TableCell>
-                        <TableCell>
-                          {trip.originCenter?.name ?? `Center ${trip.originCenterId}`}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {trip.startedAt ? formatDate(trip.startedAt) : trip.createdAt ? formatDate(trip.createdAt) : '—'}
-                        </TableCell>
-                        <TableCell>
-                          {trip.destinationCenter?.name ?? (trip.destinationCenterId ? `Center ${trip.destinationCenterId}` : '—')}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={trip.purpose === 'DELIVERY' ? 'default' : 'outline'}>
-                            {trip.purpose ?? '—'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="secondary"
-                            className="border"
-                            style={getStatusStyle(getStatusTheme(trip.phase ?? trip.status).hex)}
-                          >
-                            {getPhaseDisplayLabel(trip.phase, trip.status)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="gap-1 whitespace-nowrap"
-                            onClick={() => setDetailTripId(trip.id)}
-                          >
-                            <Eye className="h-4 w-4" />
-                            {t('trips.viewTimeline')}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {filteredTrips.map((trip) => {
+                      const exc = selectActiveExceptionForTrip(allExceptions, trip.id);
+                      const excTheme = exc ? getStatusTheme(exc.type) : null;
+                      return (
+                        <TableRow
+                          key={trip.id}
+                          style={
+                            excTheme
+                              ? {
+                                  backgroundImage: `linear-gradient(to right, ${excTheme.hex}1A, transparent 60%)`,
+                                }
+                              : undefined
+                          }
+                        >
+                          <TableCell className="py-1.5 text-xs font-medium">
+                            <span className="inline-flex items-center gap-1">
+                              {excTheme && (
+                                <span
+                                  className="h-1.5 w-1.5 rounded-full"
+                                  style={{ backgroundColor: excTheme.hex }}
+                                />
+                              )}
+                              {trip.vehicle?.plate
+                                ?? vehiclePlateById.get(trip.vehicleId)
+                                ?? `#${trip.vehicleId}`}
+                            </span>
+                          </TableCell>
+                          <TableCell className="py-1.5 text-xs">
+                            {trip.originCenter?.name ?? `Center ${trip.originCenterId}`}
+                          </TableCell>
+                          <TableCell className="py-1.5 text-[11px] text-muted-foreground">
+                            {trip.startedAt ? formatDate(trip.startedAt) : trip.createdAt ? formatDate(trip.createdAt) : '—'}
+                          </TableCell>
+                          <TableCell className="py-1.5 text-xs">
+                            {trip.destinationCenter?.name ?? (trip.destinationCenterId ? `Center ${trip.destinationCenterId}` : '—')}
+                          </TableCell>
+                          <TableCell className="py-1.5">
+                            <Badge variant={trip.purpose === 'DELIVERY' ? 'default' : 'outline'} className="text-[10px]">
+                              {trip.purpose ?? '—'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="py-1.5">
+                            {exc ? (
+                              <ExceptionBadge type={exc.type} status={exc.status} />
+                            ) : (
+                              <Badge
+                                variant="secondary"
+                                className="border text-[10px]"
+                                style={getStatusStyle(getStatusTheme(trip.phase ?? trip.status).hex)}
+                              >
+                                {getPhaseDisplayLabel(trip.phase, trip.status)}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-1.5">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 gap-1 whitespace-nowrap px-2 text-[11px]"
+                              onClick={() => navigate(`/app/trips/${trip.id}`)}
+                            >
+                              <Eye className="h-3 w-3" />
+                              {t('trips.viewTimeline')}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
 
               {!showUncompleted && totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-muted-foreground">
+                <div className="flex items-center justify-between border-t px-3 py-2">
+                  <p className="text-[11px] text-muted-foreground">
                     {t('common.pageOf', { page, total: totalPages })}
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-7 text-xs"
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page === 1 || activeFetching}
                     >
-                      <ChevronLeft className="h-4 w-4" />
+                      <ChevronLeft className="h-3 w-3" />
                       {t('common.previous')}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-7 text-xs"
                       onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                       disabled={page === totalPages || activeFetching}
                     >
                       {t('common.next')}
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRight className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
@@ -427,111 +498,6 @@ export default function Trips() {
         </CardContent>
       </Card>
 
-      {/* Trip detail modal - width grows with content */}
-      <Dialog open={detailTripId != null} onOpenChange={(open) => !open && setDetailTripId(null)} fitContent>
-        <DialogClose onClick={() => setDetailTripId(null)} />
-        <DialogContent className="w-fit min-w-[20rem] max-w-[90vw] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t('trips.detail.title')}</DialogTitle>
-            <DialogDescription>
-              {detailTripId != null && (detailTrip
-                ? `${detailTrip.purpose ?? t('trips.title')} · ${detailTrip.phase != null ? String(detailTrip.phase).replace(/_/g, ' ') : detailTrip.status ?? ''}`
-                : t('common.loading'))}
-            </DialogDescription>
-          </DialogHeader>
-          {detailLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
-            </div>
-          ) : detailError ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="text-sm text-destructive mb-2">{t('trips.detail.loadError')}</p>
-              <Button variant="outline" size="sm" onClick={() => refetchDetail()}>
-                {t('common.tryAgain')}
-              </Button>
-            </div>
-          ) : detailTrip ? (
-            <div className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="rounded-lg border p-4">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('trips.detail.vehicle')}</p>
-                  <p className="font-semibold mt-1 flex items-center gap-2">
-                    <Truck className="h-4 w-4" />
-                    {detailTrip.vehicle?.plate ?? `#${detailTrip.vehicleId}`}
-                  </p>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('trips.detail.origin')}</p>
-                  <p className="font-semibold mt-1 flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    {getCenterName(detailTrip.originCenterId)}
-                  </p>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('trips.detail.destination')}</p>
-                  <p className="font-semibold mt-1 flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    {detailTrip.destinationCenterId != null ? getCenterName(detailTrip.destinationCenterId) : '—'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Badge>{detailTrip.purpose ?? '—'}</Badge>
-                <Badge
-                  variant="secondary"
-                  className="border"
-                  style={getStatusStyle(getStatusTheme(detailTrip.phase ?? detailTrip.status).hex)}
-                >
-                  {getPhaseDisplayLabel(detailTrip.phase, detailTrip.status)}
-                </Badge>
-                {detailTrip.startedAt && (
-                  <span className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {t('trips.detail.startedAt', { date: formatDate(detailTrip.startedAt) })}
-                  </span>
-                )}
-              </div>
-              {detailTrip.events && Array.isArray(detailTrip.events) && detailTrip.events.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    {t('trips.detail.timeline')}
-                  </h4>
-                  <ul className="space-y-2">
-                    {[...(detailTrip.events || [])]
-                      .sort((a, b) => new Date((a as any).createdAt || 0).getTime() - new Date((b as any).createdAt || 0).getTime())
-                      .map((evt, i) => (
-                        <li
-                          key={(evt as any).id ?? i}
-                          className={cn(
-                            'flex items-center gap-3 rounded-lg border p-3 text-sm',
-                            i === 0 && 'bg-primary/5 border-primary/20'
-                          )}
-                        >
-                          <div className="h-2 w-2 rounded-full bg-primary shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium">{((evt as any).eventType ?? '—').replace(/_/g, ' ')}</p>
-                            {(evt as any).centerId != null && (
-                              <p className="text-xs text-muted-foreground">{getCenterName((evt as any).centerId)}</p>
-                            )}
-                          </div>
-                          <span className="text-xs text-muted-foreground shrink-0">
-                            {((evt as any).createdAt) ? formatDate((evt as any).createdAt) : '—'}
-                          </span>
-                        </li>
-                      ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          ) : null}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDetailTripId(null)}>
-              {t('common.close')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

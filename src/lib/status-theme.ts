@@ -16,6 +16,14 @@ import {
   PauseCircle,
   Info,
   Building2,
+  Wrench,
+  AlertTriangle,
+  Repeat,
+  HardHat,
+  Lock,
+  Undo2,
+  Siren,
+  LifeBuoy,
 } from 'lucide-react';
 import i18n from '@/lib/i18n';
 
@@ -33,6 +41,17 @@ const TRIP_STATUS_THEME_RAW: Record<string, StatusThemeEntry> = {
   ACTIVE: { hex: '#4CAF50', labelKey: 'vehicleStatus.ACTIVE', icon: Radio },
   IDLE: { hex: '#9E9E9E', labelKey: 'vehicleStatus.IDLE', icon: PauseCircle },
   IN_GARAGE: { hex: '#9E9E9E', labelKey: 'vehicleStatus.IN_GARAGE', icon: Building2 },
+  BREAKDOWN: { hex: '#F59E0B', labelKey: 'vehicleStatus.BREAKDOWN', icon: Wrench },
+  ACCIDENT: { hex: '#EF4444', labelKey: 'vehicleStatus.ACCIDENT', icon: AlertTriangle },
+  OVERDUE: { hex: '#F97316', labelKey: 'vehicleStatus.OVERDUE', icon: Clock },
+  TRANSFER: { hex: '#3B82F6', labelKey: 'vehicleStatus.TRANSFER', icon: Repeat },
+  AWAITING_REPAIR: { hex: '#0B7B8F', labelKey: 'vehicleStatus.AWAITING_REPAIR', icon: HardHat },
+  RESOLVED_RESUMED: { hex: '#10B981', labelKey: 'vehicleStatus.RESOLVED_RESUMED', icon: CheckCircle2 },
+  CLOSED_TRANSFERRED: { hex: '#94A3B8', labelKey: 'vehicleStatus.CLOSED_TRANSFERRED', icon: Lock },
+  CLOSED_RETURNED: { hex: '#94A3B8', labelKey: 'vehicleStatus.CLOSED_RETURNED', icon: Undo2 },
+  ESCALATED: { hex: '#EF4444', labelKey: 'vehicleStatus.ESCALATED', icon: Siren },
+  RESCUE: { hex: '#8B5CF6', labelKey: 'vehicleStatus.RESCUE', icon: LifeBuoy },
+  IN_PROGRESS: { hex: '#F97316', labelKey: 'vehicleStatus.IN_PROGRESS', icon: Clock },
 };
 
 /**

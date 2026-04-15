@@ -76,43 +76,45 @@ export default function Users() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <UsersIcon className="h-8 w-8" />
-          {t('users.title')}
-        </h1>
-        <p className="text-muted-foreground">
-          {t('users.subtitle')}
-        </p>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card/60 px-4 py-2.5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
+          <UsersIcon className="h-4 w-4 text-primary" />
+        </div>
+        <div className="min-w-0 leading-tight">
+          <h1 className="text-base font-bold tracking-tight">{t('users.title')}</h1>
+          <p className="text-[11px] text-muted-foreground">{t('users.subtitle')}</p>
+        </div>
       </div>
 
-      {/* Filters and Search */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('users.filterTitle')}</CardTitle>
-          <CardDescription>{t('users.filterDescription')}</CardDescription>
+      <Card className="rounded-xl">
+        <CardHeader className="p-3 pb-2">
+          <CardTitle className="text-sm font-semibold">{t('users.filterTitle')}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="space-y-2">
-              <Label htmlFor="search">{t('common.search')}</Label>
+        <CardContent className="p-3 pt-0">
+          <div className="grid gap-2 md:grid-cols-4">
+            <div className="space-y-1">
+              <Label htmlFor="search" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {t('common.search')}
+              </Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="search"
                   placeholder={t('users.searchPlaceholder')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
+                  className="h-8 pl-8 text-xs"
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="searchBy">{t('users.searchFields')}</Label>
+            <div className="space-y-1">
+              <Label htmlFor="searchBy" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {t('users.searchFields')}
+              </Label>
               <Select
                 id="searchBy"
+                className="h-8 text-xs"
                 value={searchBy}
                 onChange={(e) => setSearchBy(e.target.value)}
               >
@@ -121,10 +123,13 @@ export default function Users() {
                 <option value="email">{t('users.searchByEmail')}</option>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="sortBy">{t('users.sortBy')}</Label>
+            <div className="space-y-1">
+              <Label htmlFor="sortBy" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {t('users.sortBy')}
+              </Label>
               <Select
                 id="sortBy"
+                className="h-8 text-xs"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
               >
@@ -134,10 +139,13 @@ export default function Users() {
                 <option value="username:DESC">{t('users.sort.usernameDesc')}</option>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="limit">{t('common.itemsPerPage')}</Label>
+            <div className="space-y-1">
+              <Label htmlFor="limit" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {t('common.itemsPerPage')}
+              </Label>
               <Select
                 id="limit"
+                className="h-8 text-xs"
                 value={limit}
                 onChange={(e) => {
                   setLimit(Number(e.target.value));
@@ -154,59 +162,55 @@ export default function Users() {
         </CardContent>
       </Card>
 
-      {/* Users Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>{t('users.listTitle')}</CardTitle>
-              <CardDescription>
-                {usersData && usersData.meta && usersData.meta.totalItems > 0
-                  ? t('users.listDescription', {
-                      from: (page - 1) * limit + 1,
-                      to: Math.min(page * limit, usersData.meta.totalItems),
-                      total: formatNumber(usersData.meta.totalItems),
-                    })
-                  : t('users.emptyTitle')}
-              </CardDescription>
-            </div>
-          </div>
+      <Card className="rounded-xl">
+        <CardHeader className="p-3 pb-2">
+          <CardTitle className="text-sm font-semibold">{t('users.listTitle')}</CardTitle>
+          <CardDescription className="text-[11px]">
+            {usersData && usersData.meta && usersData.meta.totalItems > 0
+              ? t('users.listDescription', {
+                  from: (page - 1) * limit + 1,
+                  to: Math.min(page * limit, usersData.meta.totalItems),
+                  total: formatNumber(usersData.meta.totalItems),
+                })
+              : t('users.emptyTitle')}
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : error ? (
-            <div className="text-center py-12">
-              <UsersIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-2">{t('users.loadError')}</p>
-              <p className="text-sm text-muted-foreground">
+            <div className="py-8 text-center">
+              <UsersIcon className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
+              <p className="mb-1 text-xs text-muted-foreground">{t('users.loadError')}</p>
+              <p className="text-[11px] text-muted-foreground">
                 {error instanceof Error ? error.message : t('users.fetchError')}
               </p>
               <Button
                 variant="outline"
-                className="mt-4"
+                size="sm"
+                className="mt-2 h-7 text-xs"
                 onClick={() => window.location.reload()}
               >
                 {t('common.retry')}
               </Button>
             </div>
           ) : !usersData || !usersData.data || usersData.data.length === 0 ? (
-            <div className="text-center py-12">
-              <UsersIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">{t('users.emptyTitle')}</p>
+            <div className="py-8 text-center">
+              <UsersIcon className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">{t('users.emptyTitle')}</p>
             </div>
           ) : (
             <>
-              <div className="rounded-md border">
+              <div className="border-t">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('users.columns.fullname')}</TableHead>
-                      <TableHead>{t('users.columns.email')}</TableHead>
-                      <TableHead>{t('users.columns.company')}</TableHead>
-                      <TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">{t('users.columns.fullname')}</TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">{t('users.columns.email')}</TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">{t('users.columns.company')}</TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">
                         <SortButton field="lastLoginAt">{t('users.columns.lastLogin')}</SortButton>
                       </TableHead>
                     </TableRow>
@@ -214,10 +218,10 @@ export default function Users() {
                   <TableBody>
                     {usersData.data.map((user: any) => (
                       <TableRow key={user.id || user.accid || user.subid}>
-                        <TableCell className="font-medium">{user.fullname || user.fullName || t('common.notAvailable')}</TableCell>
-                        <TableCell>{user.email ?? t('common.notAvailable')}</TableCell>
-                        <TableCell>{user.company ?? t('common.notAvailable')}</TableCell>
-                        <TableCell>
+                        <TableCell className="py-1.5 text-xs font-medium">{user.fullname || user.fullName || t('common.notAvailable')}</TableCell>
+                        <TableCell className="py-1.5 text-xs">{user.email ?? t('common.notAvailable')}</TableCell>
+                        <TableCell className="py-1.5 text-xs">{user.company ?? t('common.notAvailable')}</TableCell>
+                        <TableCell className="py-1.5 text-[11px] text-muted-foreground">
                           {user.lastLoginAt ? formatDate(user.lastLoginAt) : t('common.notAvailable')}
                         </TableCell>
                       </TableRow>
@@ -226,20 +230,20 @@ export default function Users() {
                 </Table>
               </div>
 
-              {/* Pagination */}
               {usersData.meta && usersData.meta.totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-muted-foreground">
+                <div className="flex items-center justify-between border-t px-3 py-2">
+                  <div className="text-[11px] text-muted-foreground">
                     {t('common.pageOf', { page: usersData.meta.currentPage, total: usersData.meta.totalPages })}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-7 text-xs"
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page === 1}
                     >
-                      <ChevronLeft className="h-4 w-4" />
+                      <ChevronLeft className="h-3 w-3" />
                       {t('common.previous')}
                     </Button>
                     <div className="flex items-center gap-1">
@@ -260,7 +264,7 @@ export default function Users() {
                             variant={page === pageNum ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => setPage(pageNum)}
-                            className="w-10"
+                            className="h-7 w-7 p-0 text-xs"
                           >
                             {pageNum}
                           </Button>
@@ -270,11 +274,12 @@ export default function Users() {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-7 text-xs"
                       onClick={() => setPage((p) => Math.min(usersData.meta.totalPages, p + 1))}
                       disabled={page === usersData.meta.totalPages}
                     >
                       {t('common.next')}
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRight className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>

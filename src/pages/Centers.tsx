@@ -123,41 +123,45 @@ export default function Centers() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <Building2 className="h-8 w-8" />
-          {t('centers.title')}
-        </h1>
-        <p className="text-muted-foreground">
-          {t('centers.subtitle')}
-        </p>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card/60 px-4 py-2.5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
+          <Building2 className="h-4 w-4 text-primary" />
+        </div>
+        <div className="min-w-0 leading-tight">
+          <h1 className="text-base font-bold tracking-tight">{t('centers.title')}</h1>
+          <p className="text-[11px] text-muted-foreground">{t('centers.subtitle')}</p>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('centers.filterTitle')}</CardTitle>
-          <CardDescription>{t('centers.filterDescription')}</CardDescription>
+      <Card className="rounded-xl">
+        <CardHeader className="p-3 pb-2">
+          <CardTitle className="text-sm font-semibold">{t('centers.filterTitle')}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="space-y-2">
-              <Label htmlFor="search">{t('common.search')}</Label>
+        <CardContent className="p-3 pt-0">
+          <div className="grid gap-2 md:grid-cols-4">
+            <div className="space-y-1">
+              <Label htmlFor="search" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {t('common.search')}
+              </Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="search"
                   placeholder={t('centers.searchPlaceholder')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
+                  className="h-8 pl-8 text-xs"
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="searchBy">{t('centers.searchFields')}</Label>
+            <div className="space-y-1">
+              <Label htmlFor="searchBy" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {t('centers.searchFields')}
+              </Label>
               <Select
                 id="searchBy"
+                className="h-8 text-xs"
                 value={searchBy}
                 onChange={(e) => setSearchBy(e.target.value)}
               >
@@ -168,10 +172,13 @@ export default function Centers() {
                 <option value="name,geozone,manager">{t('centers.searchBy.combined')}</option>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="sortBy">{t('centers.sortBy')}</Label>
+            <div className="space-y-1">
+              <Label htmlFor="sortBy" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {t('centers.sortBy')}
+              </Label>
               <Select
                 id="sortBy"
+                className="h-8 text-xs"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
               >
@@ -182,10 +189,13 @@ export default function Centers() {
                 <option value="groupname:ASC">{t('centers.sort.groupAsc')}</option>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="limit">{t('common.itemsPerPage')}</Label>
+            <div className="space-y-1">
+              <Label htmlFor="limit" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {t('common.itemsPerPage')}
+              </Label>
               <Select
                 id="limit"
+                className="h-8 text-xs"
                 value={limit}
                 onChange={(e) => {
                   setLimit(Number(e.target.value));
@@ -202,83 +212,80 @@ export default function Centers() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>{t('centers.listTitle')}</CardTitle>
-              <CardDescription>
-                {centersData && centersData.meta && centersData.meta.totalItems > 0
-                  ? t('centers.listDescription', {
-                      from: (page - 1) * limit + 1,
-                      to: Math.min(page * limit, centersData.meta.totalItems),
-                      total: formatNumber(centersData.meta.totalItems),
-                    })
-                  : t('centers.emptyTitle')}
-              </CardDescription>
-            </div>
-          </div>
+      <Card className="rounded-xl">
+        <CardHeader className="p-3 pb-2">
+          <CardTitle className="text-sm font-semibold">{t('centers.listTitle')}</CardTitle>
+          <CardDescription className="text-[11px]">
+            {centersData && centersData.meta && centersData.meta.totalItems > 0
+              ? t('centers.listDescription', {
+                  from: (page - 1) * limit + 1,
+                  to: Math.min(page * limit, centersData.meta.totalItems),
+                  total: formatNumber(centersData.meta.totalItems),
+                })
+              : t('centers.emptyTitle')}
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : error ? (
-            <div className="text-center py-12">
-              <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-2">{t('centers.loadError')}</p>
-              <p className="text-sm text-muted-foreground">
+            <div className="py-8 text-center">
+              <Building2 className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
+              <p className="mb-1 text-xs text-muted-foreground">{t('centers.loadError')}</p>
+              <p className="text-[11px] text-muted-foreground">
                 {error instanceof Error ? error.message : t('centers.fetchError')}
               </p>
               <Button
                 variant="outline"
-                className="mt-4"
+                size="sm"
+                className="mt-2 h-7 text-xs"
                 onClick={() => window.location.reload()}
               >
                 {t('common.retry')}
               </Button>
             </div>
           ) : !centersData || !centersData.data || centersData.data.length === 0 ? (
-            <div className="text-center py-12">
-              <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">{t('centers.emptyTitle')}</p>
+            <div className="py-8 text-center">
+              <Building2 className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">{t('centers.emptyTitle')}</p>
             </div>
           ) : (
             <>
-              <div className="rounded-md border">
+              <div className="border-t">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">
                         <SortButton field="name">{t('centers.columns.name')}</SortButton>
                       </TableHead>
-                      <TableHead>{t('centers.columns.geozone')}</TableHead>
-                      <TableHead>{t('centers.columns.manager')}</TableHead>
-                      <TableHead>{t('centers.columns.group')}</TableHead>
-                      <TableHead>{t('centers.columns.time1')}</TableHead>
-                      <TableHead>{t('centers.columns.time2')}</TableHead>
-                      <TableHead>{t('centers.columns.breakStart')}</TableHead>
-                      <TableHead>{t('centers.columns.breakStop')}</TableHead>
-                      <TableHead className="w-[100px]">{t('centers.columns.actions')}</TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">{t('centers.columns.geozone')}</TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">{t('centers.columns.manager')}</TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">{t('centers.columns.group')}</TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">{t('centers.columns.time1')}</TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">{t('centers.columns.time2')}</TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">{t('centers.columns.breakStart')}</TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">{t('centers.columns.breakStop')}</TableHead>
+                      <TableHead className="h-8 w-[90px] py-1 text-[10px]">{t('centers.columns.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {centersData.data.map((center: any) => (
                       <TableRow key={center.id}>
-                        <TableCell className="font-medium">{center.name ?? t('common.notAvailable')}</TableCell>
-                        <TableCell>{center.geozone ?? t('common.notAvailable')}</TableCell>
-                        <TableCell>{center.manager ?? t('common.notAvailable')}</TableCell>
-                        <TableCell>{center.groupname ?? t('common.notAvailable')}</TableCell>
-                        <TableCell>{center.time1 ?? t('common.notAvailable')}</TableCell>
-                        <TableCell>{center.time2 ?? t('common.notAvailable')}</TableCell>
-                        <TableCell>{center.breakstart ?? t('common.notAvailable')}</TableCell>
-                        <TableCell>{center.breakstop ?? t('common.notAvailable')}</TableCell>
-                        <TableCell>
+                        <TableCell className="py-1.5 text-xs font-medium">{center.name ?? t('common.notAvailable')}</TableCell>
+                        <TableCell className="py-1.5 text-xs">{center.geozone ?? t('common.notAvailable')}</TableCell>
+                        <TableCell className="py-1.5 text-xs">{center.manager ?? t('common.notAvailable')}</TableCell>
+                        <TableCell className="py-1.5 text-xs">{center.groupname ?? t('common.notAvailable')}</TableCell>
+                        <TableCell className="py-1.5 text-[11px] text-muted-foreground">{center.time1 ?? t('common.notAvailable')}</TableCell>
+                        <TableCell className="py-1.5 text-[11px] text-muted-foreground">{center.time2 ?? t('common.notAvailable')}</TableCell>
+                        <TableCell className="py-1.5 text-[11px] text-muted-foreground">{center.breakstart ?? t('common.notAvailable')}</TableCell>
+                        <TableCell className="py-1.5 text-[11px] text-muted-foreground">{center.breakstop ?? t('common.notAvailable')}</TableCell>
+                        <TableCell className="py-1.5">
                           <Button
                             variant="outline"
                             size="sm"
-                            className="gap-1"
+                            className="h-7 gap-1 px-2 text-[11px]"
                             onClick={() => {
                               setQueueModalCenterId(center.id);
                               setQueueType('LOADING');
@@ -295,18 +302,19 @@ export default function Centers() {
               </div>
 
               {centersData.meta && centersData.meta.totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-muted-foreground">
+                <div className="flex items-center justify-between border-t px-3 py-2">
+                  <div className="text-[11px] text-muted-foreground">
                     {t('common.pageOf', { page: centersData.meta.currentPage, total: centersData.meta.totalPages })}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-7 text-xs"
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page === 1}
                     >
-                      <ChevronLeft className="h-4 w-4" />
+                      <ChevronLeft className="h-3 w-3" />
                       {t('common.previous')}
                     </Button>
                     <div className="flex items-center gap-1">
@@ -327,7 +335,7 @@ export default function Centers() {
                             variant={page === pageNum ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => setPage(pageNum)}
-                            className="w-10"
+                            className="h-7 w-7 p-0 text-xs"
                           >
                             {pageNum}
                           </Button>
@@ -337,11 +345,12 @@ export default function Centers() {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-7 text-xs"
                       onClick={() => setPage((p) => Math.min(centersData.meta.totalPages, p + 1))}
                       disabled={page === centersData.meta.totalPages}
                     >
                       {t('common.next')}
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRight className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>

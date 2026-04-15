@@ -20,10 +20,9 @@ import {
   type TripsByDateItem,
   type QueuesByDateItem,
 } from '@/api/dashboard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import {
   Car,
@@ -38,9 +37,13 @@ import {
   CheckCircle2,
   ArrowRight,
   Sparkles,
-  Filter,
   Calendar,
+  AlertTriangle,
 } from 'lucide-react';
+import { useExceptionsStore } from '@/stores/exceptions.store';
+import { ACTIVE_STATUSES, type ExceptionType, type ExceptionRecord } from '@/types/exceptions';
+import { ExceptionBadge } from '@/components/exceptions/ExceptionBadge';
+import { getActionNeededText, formatRelativeFromNow } from '@/components/exceptions/helpers';
 import {
   AreaChart,
   Area,
@@ -49,9 +52,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
-import { formatDate, formatNumber } from '@/lib/utils';
+import { formatNumber, cn } from '@/lib/utils';
 import {
   TRIP_STATUS_THEME,
   getStatusTheme,
@@ -208,6 +210,32 @@ export default function Dashboard() {
     staleTime: 30 * 1000,
   });
 
+  const allExceptions = useExceptionsStore((s) => s.exceptions);
+  const activeExceptions = useMemo(
+    () => allExceptions.filter((e) => ACTIVE_STATUSES.includes(e.status)),
+    [allExceptions],
+  );
+  const exceptionCounts = useMemo(() => {
+    const counts: Record<ExceptionType, number> = {
+      BREAKDOWN: 0,
+      ACCIDENT: 0,
+      OVERDUE: 0,
+      TRANSFER: 0,
+    };
+    for (const e of allExceptions) {
+      if (ACTIVE_STATUSES.includes(e.status)) counts[e.type] += 1;
+    }
+    return counts;
+  }, [allExceptions]);
+  const [exceptionFilter, setExceptionFilter] = useState<ExceptionType | 'ALL'>('ALL');
+  const filteredExceptions = useMemo(
+    () =>
+      exceptionFilter === 'ALL'
+        ? activeExceptions
+        : activeExceptions.filter((e) => e.type === exceptionFilter),
+    [activeExceptions, exceptionFilter],
+  );
+
   const normalizedStatus = normalizeStatusSummary(statusSummary);
   const activeTrips: Trip[] = tripsData?.data ?? [];
   const centers = centersData?.data ?? [];
@@ -253,377 +281,254 @@ export default function Dashboard() {
   const queueActive = Number(loadingActive) + Number(unloadingActive);
 
   return (
-    <div className="space-y-8">
-      {/* Hero — Proof Arrive tint, badges for context */}
-      <header className="relative overflow-hidden rounded-2xl bg-primary px-6 py-6 text-primary-foreground shadow-lg border border-primary/20">
-        <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 font-medium">
-                <Sparkles className="h-3.5 w-3.5 mr-1" />
-                {t('dashboard.badges.operationalOverview')}
-              </Badge>
-              {errorReports && (
-                <Badge variant="secondary" className="bg-status-warning/90 text-white border-status-warning font-medium">
-                  <AlertCircle className="h-3.5 w-3.5 mr-1" />
-                  {t('dashboard.badges.partialData')}
-                </Badge>
-              )}
-            </div>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">{t('dashboard.title')}</h1>
-            <p className="mt-1 max-w-md text-sm text-primary-foreground/90">
-              {t('dashboard.subtitle')}
-            </p>
+    <div className="flex flex-col gap-3">
+      {/* Compact toolbar: title + badges + filters inline */}
+      <header className="flex flex-wrap items-center gap-2 sm:gap-3 rounded-xl border border-primary/20 bg-primary px-3 py-2 sm:px-4 sm:py-2.5 text-primary-foreground shadow-sm">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-foreground/15">
+            <Sparkles className="h-4 w-4" />
           </div>
-          <Badge variant="secondary" className="w-fit bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 font-medium">
-            <Activity className="h-4 w-4 mr-1.5" />
-            {t('dashboard.badges.liveData')}
-          </Badge>
+          <div className="leading-tight">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight">{t('dashboard.title')}</h1>
+            <p className="text-xs text-primary-foreground/80">{t('dashboard.badges.operationalOverview')}</p>
+          </div>
         </div>
-        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary-foreground/10" />
-        <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-primary-foreground/5" />
+        {errorReports && (
+          <Badge variant="secondary" className="bg-status-warning/90 text-white border-status-warning text-xs">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            {t('dashboard.badges.partialData')}
+          </Badge>
+        )}
+        <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 text-xs">
+          <Activity className="h-3 w-3 mr-1" />
+          {t('dashboard.badges.liveData')}
+        </Badge>
+        <div className="ml-auto flex flex-wrap items-center gap-1.5">
+          <Calendar className="h-3.5 w-3.5 text-primary-foreground/80" />
+          <Select
+            id="report-date"
+            value={datePreset}
+            onChange={(e) => setDatePreset(e.target.value as ReportDatePreset)}
+            className="h-8 w-auto bg-primary-foreground/15 text-sm text-primary-foreground border-primary-foreground/30"
+          >
+            <option className="text-foreground" value="today">{t('dashboard.period.today')}</option>
+            <option className="text-foreground" value="last7">{t('dashboard.period.last7')}</option>
+            <option className="text-foreground" value="month">{t('dashboard.period.month')}</option>
+          </Select>
+          <Select
+            id="report-center"
+            value={centerId === '' ? 'all' : String(centerId)}
+            onChange={(e) => setCenterId(e.target.value === 'all' ? '' : Number(e.target.value))}
+            className="h-8 w-auto max-w-[160px] bg-primary-foreground/15 text-sm text-primary-foreground border-primary-foreground/30"
+          >
+            <option className="text-foreground" value="all">{t('dashboard.filters.allCenters')}</option>
+            {(centers as { id: number; name?: string }[]).map((c) => (
+              <option className="text-foreground" key={c.id} value={c.id}>
+                {c.name ?? `Center ${c.id}`}
+              </option>
+            ))}
+          </Select>
+          <Select
+            id="report-vehicle"
+            value={vehicleId === '' ? 'all' : String(vehicleId)}
+            onChange={(e) => setVehicleId(e.target.value === 'all' ? '' : Number(e.target.value))}
+            className="h-8 w-auto max-w-[160px] bg-primary-foreground/15 text-sm text-primary-foreground border-primary-foreground/30"
+          >
+            <option className="text-foreground" value="all">{t('dashboard.filters.allVehicles')}</option>
+            {(vehicles as { id: number; plate?: string }[]).map((v) => (
+              <option className="text-foreground" key={v.id} value={v.id}>
+                {v.plate ?? `Vehicle ${v.id}`}
+              </option>
+            ))}
+          </Select>
+        </div>
       </header>
 
-      {/* Report filters — date range, center, vehicle */}
-      <Card className="border-border bg-card">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
-            <Filter className="h-4 w-4 text-primary" />
-            {t('dashboard.filters.title')}
-          </CardTitle>
-          <CardDescription>
-            {t('dashboard.filters.description')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="report-date" className="flex items-center gap-1.5 text-sm">
-                <Calendar className="h-3.5 w-3.5" />
-                {t('dashboard.filters.period')}
-              </Label>
-              <Select
-                id="report-date"
-                value={datePreset}
-                onChange={(e) => setDatePreset(e.target.value as ReportDatePreset)}
-              >
-                <option value="today">{t('dashboard.period.today')}</option>
-                <option value="last7">{t('dashboard.period.last7')}</option>
-                <option value="month">{t('dashboard.period.month')}</option>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="report-center" className="text-sm">{t('dashboard.filters.center')}</Label>
-              <Select
-                id="report-center"
-                value={centerId === '' ? 'all' : String(centerId)}
-                onChange={(e) => setCenterId(e.target.value === 'all' ? '' : Number(e.target.value))}
-              >
-                <option value="all">{t('dashboard.filters.allCenters')}</option>
-                {(centers as { id: number; name?: string }[]).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name ?? `Center ${c.id}`}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="report-vehicle" className="text-sm">{t('dashboard.filters.vehicle')}</Label>
-              <Select
-                id="report-vehicle"
-                value={vehicleId === '' ? 'all' : String(vehicleId)}
-                onChange={(e) => setVehicleId(e.target.value === 'all' ? '' : Number(e.target.value))}
-              >
-                <option value="all">{t('dashboard.filters.allVehicles')}</option>
-                {(vehicles as { id: number; plate?: string }[]).map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.plate ?? `Vehicle ${v.id}`}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Vehicle status — badge-style links, Proof Arrive status colors */}
-      <section>
-        <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
-          <Car className="h-4 w-4 text-primary" />
-          {t('dashboard.vehiclesByStatus')}
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {VEHICLE_STATUS_KEYS.map((key) => {
-            const config = getVehicleStatusConfig(key);
-            const Icon = config.icon;
-            const count = normalizedStatus[key] ?? 0;
-            return (
-              <Link key={key} to={`/app/vehicles?status=${key}`}>
-                <Badge
-                  variant="outline"
-                  className="card-hover gap-1.5 border-2 px-3 py-1.5 text-xs font-semibold transition-all hover:shadow-md"
-                  style={{
-                    color: config.color,
-                    backgroundColor: config.backgroundColor,
-                    borderColor: config.borderColor,
-                  }}
-                >
-                  <Icon className="h-3.5 w-3.5" style={{ color: config.color }} />
-                  <span>{config.label}</span>
-                  <span className="ml-0.5 tabular-nums opacity-90">({formatNumber(count)})</span>
-                </Badge>
-              </Link>
-            );
-          })}
-        </div>
-        {totalVehicles > 0 && (
-          <p className="mt-3 text-sm text-muted-foreground">
-            {t('dashboard.totalVehicles')} <span className="font-semibold text-foreground">{formatNumber(totalVehicles)}</span>
-          </p>
-        )}
-      </section>
-
-      {/* KPI row — Proof Arrive semantic colors, badges for labels */}
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Link to="/app/trips">
-          <Card className="card-hover border-l-4 border-l-status-info bg-card">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Badge variant="secondary" className="mb-2 text-[10px] font-medium uppercase tracking-wider border-status-info/30 bg-status-info/10 text-status-info">
-                    {t('dashboard.kpi.trips')}
-                  </Badge>
-                  <p className="text-2xl font-bold text-foreground">{formatNumber(startedInPeriod)}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {t('dashboard.kpi.tripsSub', {
-                      completed: formatNumber(completedInPeriod),
-                      ongoing: formatNumber(ongoingCount),
-                    })}
-                  </p>
-                </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-status-info/15">
-                  <ArrowRightLeft className="h-6 w-6 text-status-info" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Card className="card-hover border-l-4 border-l-status-success bg-card">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <Badge variant="secondary" className="mb-2 text-[10px] font-medium uppercase tracking-wider border-status-success/30 bg-status-success/10 text-status-success">
-                  {t('dashboard.kpi.completionRate')}
-                </Badge>
-                <p className="text-2xl font-bold text-foreground">
-                  {typeof completionRatePercent === 'number' ? `${completionRatePercent.toFixed(1)}%` : '—'}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-status-success/15">
-                <CheckCircle2 className="h-6 w-6 text-status-success" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Link to="/app/centers">
-          <Card className="card-hover border-l-4 border-l-status-transit bg-card">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Badge variant="secondary" className="mb-2 text-[10px] font-medium uppercase tracking-wider border-status-transit/30 bg-status-transit/10 text-status-transit">
-                    {t('dashboard.kpi.centers')}
-                  </Badge>
-                  <p className="text-2xl font-bold text-foreground">{formatNumber(centerCount)}</p>
-                </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-status-transit/15">
-                  <Building2 className="h-6 w-6 text-status-transit" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Card className="card-hover border-l-4 border-l-status-warning bg-card">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <Badge variant="secondary" className="mb-2 text-[10px] font-medium uppercase tracking-wider border-status-warning/30 bg-status-warning/10 text-status-warning">
-                  {t('dashboard.kpi.queuesActive')}
-                </Badge>
-                <p className="text-2xl font-bold text-foreground">{formatNumber(queueActive)}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{t('dashboard.kpi.queuesActiveSub')}</p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-status-warning/15">
-                <ListOrdered className="h-6 w-6 text-status-warning" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* Trips over time + Queues over time */}
-      {(tripsByDate.length > 0 || queuesByDate.length > 0) && (
-        <section className="grid gap-6 lg:grid-cols-2">
-          {tripsByDate.length > 0 && (
-            <Card className="border-border bg-card">
-              <CardHeader>
-                <CardTitle className="text-base font-semibold text-foreground">{t('dashboard.charts.tripsOverTime')}</CardTitle>
-                <CardDescription>{t('dashboard.charts.tripsOverTimeDesc')}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={tripsByDate.map((d) => ({
-                        date: d.date.slice(0, 10),
-                        started: d.startedCount ?? d.count ?? 0,
-                        completed: d.completedCount ?? 0,
-                      }))}
-                      margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" />
-                      <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
-                      <Tooltip
-                        contentStyle={{ borderRadius: 8 }}
-                        labelFormatter={(v) => String(v)}
-                        formatter={(value: number) => [formatNumber(value), '']}
-                      />
-                      <Legend />
-                      <Area
-                        type="monotone"
-                        dataKey="started"
-                        name={t('dashboard.charts.started')}
-                        fill="var(--status-info)"
-                        stroke="var(--status-info)"
-                        fillOpacity={0.5}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="completed"
-                        name={t('dashboard.charts.completed')}
-                        fill="var(--status-success)"
-                        stroke="var(--status-success)"
-                        fillOpacity={0.5}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-          {queuesByDate.length > 0 && (
-            <Card className="border-border bg-card">
-              <CardHeader>
-                <CardTitle className="text-base font-semibold text-foreground">{t('dashboard.charts.queuesOverTime')}</CardTitle>
-                <CardDescription>{t('dashboard.charts.queuesOverTimeDesc')}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={queuesByDate.map((d) => ({
-                        date: d.date.slice(0, 10),
-                        loading: d.loadingActive ?? 0,
-                        unloading: d.unloadingActive ?? 0,
-                      }))}
-                      margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11 }} className="text-muted-foreground" />
-                      <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
-                      <Tooltip
-                        contentStyle={{ borderRadius: 8 }}
-                        labelFormatter={(v) => String(v)}
-                        formatter={(value: number) => [formatNumber(value), '']}
-                      />
-                      <Legend />
-                      <Area
-                        type="monotone"
-                        dataKey="loading"
-                        name={t('dashboard.charts.loadingActive')}
-                        fill="var(--status-warning)"
-                        stroke="var(--status-warning)"
-                        fillOpacity={0.6}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="unloading"
-                        name={t('dashboard.charts.unloadingActive')}
-                        fill="var(--status-transit)"
-                        stroke="var(--status-transit)"
-                        fillOpacity={0.6}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </section>
+      {activeExceptions.length > 0 && (
+        <ExceptionAlertBanner exceptions={activeExceptions} />
       )}
 
-      {/* Active trips + Quick links */}
-      <div className="grid gap-6 lg:grid-cols-5">
-        <Card className="card-hover border border-border bg-card lg:col-span-3">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2 text-foreground">
-                  <Truck className="h-5 w-5 text-primary" />
-                  {t('dashboard.activeTrips.title')}
-                </CardTitle>
-                <CardDescription>{t('dashboard.activeTrips.description')}</CardDescription>
+      {/* KPI row — compact */}
+      <section className="grid gap-2 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+        <CompactKpi
+          to="/app/trips"
+          label={t('dashboard.kpi.trips')}
+          value={formatNumber(startedInPeriod)}
+          sub={t('dashboard.kpi.tripsSub', {
+            completed: formatNumber(completedInPeriod),
+            ongoing: formatNumber(ongoingCount),
+          })}
+          icon={ArrowRightLeft}
+          colorClass="info"
+        />
+        <CompactKpi
+          label={t('dashboard.kpi.completionRate')}
+          value={typeof completionRatePercent === 'number' ? `${completionRatePercent.toFixed(1)}%` : '—'}
+          icon={CheckCircle2}
+          colorClass="success"
+        />
+        <CompactKpi
+          to="/app/centers"
+          label={t('dashboard.kpi.centers')}
+          value={formatNumber(centerCount)}
+          icon={Building2}
+          colorClass="transit"
+        />
+        <CompactKpi
+          label={t('dashboard.kpi.queuesActive')}
+          value={formatNumber(queueActive)}
+          sub={t('dashboard.kpi.queuesActiveSub')}
+          icon={ListOrdered}
+          colorClass="warning"
+        />
+        <Link to="/app/incidents">
+          <Card
+            className={cn(
+              'card-hover border-l-4 bg-card h-full',
+              activeExceptions.length > 0 ? 'border-l-red-500 bg-red-50/60' : 'border-l-emerald-500',
+            )}
+          >
+            <CardContent className="flex items-center justify-between p-3">
+              <div className="min-w-0">
+                <p
+                  className={cn(
+                    'text-[11px] font-semibold uppercase tracking-wider',
+                    activeExceptions.length > 0 ? 'text-red-600' : 'text-emerald-600',
+                  )}
+                >
+                  {t('exceptions.kpi.label')}
+                </p>
+                <p className="mt-0.5 text-xl sm:text-2xl font-bold leading-none tabular-nums">
+                  {formatNumber(activeExceptions.length)}
+                </p>
+                <p
+                  className={cn(
+                    'mt-0.5 text-xs font-medium truncate',
+                    activeExceptions.length > 0 ? 'text-red-600' : 'text-emerald-600',
+                  )}
+                >
+                  {activeExceptions.length > 0
+                    ? t('exceptions.kpi.needsAction')
+                    : t('exceptions.kpi.allClear')}
+                </p>
               </div>
-              <Link to="/app/trips">
-                <Button variant="ghost" size="sm" className="gap-1.5 font-medium text-foreground">
-                  {t('dashboard.activeTrips.viewAll')}
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
+              <div
+                className={cn(
+                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+                  activeExceptions.length > 0 ? 'bg-red-500/15' : 'bg-emerald-500/15',
+                )}
+              >
+                <AlertTriangle
+                  className={cn(
+                    'h-4 w-4',
+                    activeExceptions.length > 0 ? 'text-red-600' : 'text-emerald-600',
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      </section>
+
+      {/* Vehicle status chips — inline wrap */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="mr-1 inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
+          <Car className="h-3 w-3" />
+          {t('dashboard.vehiclesByStatus')}:
+        </span>
+        {VEHICLE_STATUS_KEYS.map((key) => {
+          const config = getVehicleStatusConfig(key);
+          const Icon = config.icon;
+          const count = normalizedStatus[key] ?? 0;
+          return (
+            <Link key={key} to={`/app/vehicles?status=${key}`}>
+              <Badge
+                variant="outline"
+                className="gap-1 border px-1.5 py-0.5 text-xs font-semibold"
+                style={{
+                  color: config.color,
+                  backgroundColor: config.backgroundColor,
+                  borderColor: config.borderColor,
+                }}
+              >
+                <Icon className="h-2.5 w-2.5" style={{ color: config.color }} />
+                <span>{config.label}</span>
+                <span className="tabular-nums opacity-90">{formatNumber(count)}</span>
+              </Badge>
+            </Link>
+          );
+        })}
+        {totalVehicles > 0 && (
+          <span className="ml-1 text-xs text-muted-foreground">
+            · {formatNumber(totalVehicles)} {t('common.vehicle_other')}
+          </span>
+        )}
+      </div>
+
+      {activeExceptions.length > 0 && (
+        <ActiveExceptionsSection
+          filter={exceptionFilter}
+          setFilter={setExceptionFilter}
+          counts={exceptionCounts}
+          exceptions={filteredExceptions}
+        />
+      )}
+
+      {/* Bottom grid: Active trips · charts · Quick links */}
+      <div className="grid gap-3 xl:grid-cols-12">
+        {/* Active trips */}
+        <Card className="border border-border bg-card xl:col-span-5">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-3 pb-2">
+            <div className="min-w-0">
+              <CardTitle className="flex items-center gap-1.5 text-sm sm:text-base font-semibold">
+                <Truck className="h-3.5 w-3.5 text-primary" />
+                {t('dashboard.activeTrips.title')}
+              </CardTitle>
             </div>
+            <Link to="/app/trips">
+              <Button variant="ghost" size="sm" className="h-7 gap-1 text-sm">
+                {t('dashboard.activeTrips.viewAll')}
+                <ArrowRight className="h-3 w-3" />
+              </Button>
+            </Link>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 pt-0">
             {activeTrips.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30 py-12 text-center">
-                <ArrowRightLeft className="h-10 w-10 text-muted-foreground" />
-                <p className="mt-3 font-medium text-muted-foreground">{t('dashboard.activeTrips.empty')}</p>
-                <p className="mt-0.5 text-sm text-muted-foreground">{t('dashboard.activeTrips.emptyHint')}</p>
+              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 py-6 text-center">
+                <ArrowRightLeft className="h-6 w-6 text-muted-foreground" />
+                <p className="mt-1.5 text-sm font-medium text-muted-foreground">{t('dashboard.activeTrips.empty')}</p>
               </div>
             ) : (
-              <ul className="space-y-2">
-                {activeTrips.slice(0, 8).map((trip) => {
+              <ul className="space-y-1.5">
+                {activeTrips.slice(0, 5).map((trip) => {
                   const theme = getStatusTheme(trip.phase ?? trip.status);
                   const displayLabel = theme.label !== '—' ? theme.label : (trip.phase?.replace(/_/g, ' ') ?? trip.status ?? '—');
                   return (
                     <li key={trip.id}>
                       <Link
-                        to={`/app/trips?tripId=${trip.id}`}
-                        className="flex items-center gap-4 rounded-xl border border-border bg-muted/20 p-3 transition-colors hover:bg-muted/50"
+                        to={`/app/trips/${trip.id}`}
+                        className="flex items-center gap-2 rounded-lg border border-border bg-muted/20 px-2 py-1.5 transition-colors hover:bg-muted/50"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-foreground truncate">
-                            {trip.vehicle?.plate ?? `Vehicle #${trip.vehicleId}`}
+                          <p className="truncate text-sm font-semibold text-foreground">
+                            {trip.vehicle?.plate ?? `#${trip.vehicleId}`}
                           </p>
-                          <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                            <MapPin className="h-3 w-3 shrink-0" />
-                            {trip.originCenter?.name ?? `Center ${trip.originCenterId}`}
-                            <span className="mx-1">→</span>
-                            {trip.destinationCenter?.name ?? (trip.destinationCenterId ? `Center ${trip.destinationCenterId}` : '—')}
+                          <p className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                            <MapPin className="h-2.5 w-2.5 shrink-0" />
+                            <span className="truncate">
+                              {trip.originCenter?.name ?? `C${trip.originCenterId}`}
+                              {' → '}
+                              {trip.destinationCenter?.name ?? (trip.destinationCenterId ? `C${trip.destinationCenterId}` : '—')}
+                            </span>
                           </p>
                         </div>
                         <Badge
                           variant="secondary"
-                          className="shrink-0 border font-medium"
+                          className="shrink-0 border px-1.5 py-0 text-[11px] font-medium"
                           style={getStatusStyle(theme.hex)}
                         >
                           {displayLabel}
                         </Badge>
-                        {trip.startedAt && (
-                          <span className="shrink-0 text-xs text-muted-foreground">{formatDate(trip.startedAt)}</span>
-                        )}
                       </Link>
                     </li>
                   );
@@ -633,34 +538,103 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="card-hover border border-border bg-card lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-foreground">
-              <Clock className="h-5 w-5 text-primary" />
+        {/* Charts stacked */}
+        <div className="flex flex-col gap-3 xl:col-span-4">
+          {tripsByDate.length > 0 && (
+            <Card className="border-border bg-card">
+              <CardHeader className="p-3 pb-1">
+                <CardTitle className="text-sm sm:text-base font-semibold">{t('dashboard.charts.tripsOverTime')}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 pt-0">
+                <div className="h-28">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={tripsByDate.map((d) => ({
+                        date: d.date.slice(0, 10),
+                        started: d.startedCount ?? d.count ?? 0,
+                        completed: d.completedCount ?? 0,
+                      }))}
+                      margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="date" tick={{ fontSize: 9 }} />
+                      <YAxis tick={{ fontSize: 9 }} />
+                      <Tooltip
+                        contentStyle={{ borderRadius: 6, fontSize: 11 }}
+                        formatter={(value: number) => [formatNumber(value), '']}
+                      />
+                      <Area type="monotone" dataKey="started" name={t('dashboard.charts.started')} fill="var(--status-info)" stroke="var(--status-info)" fillOpacity={0.5} />
+                      <Area type="monotone" dataKey="completed" name={t('dashboard.charts.completed')} fill="var(--status-success)" stroke="var(--status-success)" fillOpacity={0.5} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {queuesByDate.length > 0 && (
+            <Card className="border-border bg-card">
+              <CardHeader className="p-3 pb-1">
+                <CardTitle className="text-sm sm:text-base font-semibold">{t('dashboard.charts.queuesOverTime')}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 pt-0">
+                <div className="h-28">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={queuesByDate.map((d) => ({
+                        date: d.date.slice(0, 10),
+                        loading: d.loadingActive ?? 0,
+                        unloading: d.unloadingActive ?? 0,
+                      }))}
+                      margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="date" tick={{ fontSize: 9 }} />
+                      <YAxis tick={{ fontSize: 9 }} />
+                      <Tooltip
+                        contentStyle={{ borderRadius: 6, fontSize: 11 }}
+                        formatter={(value: number) => [formatNumber(value), '']}
+                      />
+                      <Area type="monotone" dataKey="loading" name={t('dashboard.charts.loadingActive')} fill="var(--status-warning)" stroke="var(--status-warning)" fillOpacity={0.6} />
+                      <Area type="monotone" dataKey="unloading" name={t('dashboard.charts.unloadingActive')} fill="var(--status-transit)" stroke="var(--status-transit)" fillOpacity={0.6} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {tripsByDate.length === 0 && queuesByDate.length === 0 && (
+            <Card className="border-border bg-card">
+              <CardContent className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
+                {t('dashboard.activeTrips.emptyHint')}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Quick links */}
+        <Card className="border border-border bg-card xl:col-span-3">
+          <CardHeader className="p-3 pb-2">
+            <CardTitle className="flex items-center gap-1.5 text-sm sm:text-base font-semibold">
+              <Clock className="h-3.5 w-3.5 text-primary" />
               {t('dashboard.quickLinks.title')}
             </CardTitle>
-            <CardDescription>{t('dashboard.quickLinks.description')}</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 sm:grid-cols-2">
+          <CardContent className="p-3 pt-0">
+            <div className="grid grid-cols-2 gap-1.5">
               {[
-                { to: '/app/vehicles', label: t('dashboard.quickLinks.vehiclesLabel'), sub: t('dashboard.quickLinks.vehiclesSub'), icon: Car },
-                { to: '/app/trips', label: t('dashboard.quickLinks.tripsLabel'), sub: t('dashboard.quickLinks.tripsSub'), icon: ArrowRightLeft },
-                { to: '/app/centers', label: t('dashboard.quickLinks.centersLabel'), sub: t('dashboard.quickLinks.centersSub'), icon: Building2 },
-                { to: '/app/settings', label: t('dashboard.quickLinks.settingsLabel'), sub: t('dashboard.quickLinks.settingsSub'), icon: Activity },
+                { to: '/app/vehicles', label: t('dashboard.quickLinks.vehiclesLabel'), icon: Car },
+                { to: '/app/trips', label: t('dashboard.quickLinks.tripsLabel'), icon: ArrowRightLeft },
+                { to: '/app/centers', label: t('dashboard.quickLinks.centersLabel'), icon: Building2 },
+                { to: '/app/incidents', label: t('nav.incidents'), icon: AlertTriangle },
               ].map((item) => {
                 const Icon = item.icon;
                 return (
                   <Link key={item.to} to={item.to}>
-                    <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/40 hover:bg-primary/5">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15">
-                        <Icon className="h-5 w-5 text-primary" />
+                    <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2 py-1.5 transition-all hover:border-primary/40 hover:bg-primary/5">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/15">
+                        <Icon className="h-3.5 w-3.5 text-primary" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-foreground">{item.label}</p>
-                        <p className="text-xs text-muted-foreground">{item.sub}</p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <p className="min-w-0 truncate text-sm font-semibold text-foreground">{item.label}</p>
                     </div>
                   </Link>
                 );
@@ -670,5 +644,223 @@ export default function Dashboard() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function CompactKpi({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  colorClass,
+  to,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  icon: typeof ArrowRightLeft;
+  colorClass: 'info' | 'success' | 'transit' | 'warning';
+  to?: string;
+}) {
+  const card = (
+    <Card
+      className={cn(
+        'card-hover border-l-4 bg-card h-full',
+        colorClass === 'info' && 'border-l-status-info',
+        colorClass === 'success' && 'border-l-status-success',
+        colorClass === 'transit' && 'border-l-status-transit',
+        colorClass === 'warning' && 'border-l-status-warning',
+      )}
+    >
+      <CardContent className="flex items-center justify-between p-3">
+        <div className="min-w-0">
+          <p
+            className={cn(
+              'text-[11px] font-semibold uppercase tracking-wider',
+              colorClass === 'info' && 'text-status-info',
+              colorClass === 'success' && 'text-status-success',
+              colorClass === 'transit' && 'text-status-transit',
+              colorClass === 'warning' && 'text-status-warning',
+            )}
+          >
+            {label}
+          </p>
+          <p className="mt-0.5 text-xl sm:text-2xl font-bold leading-none tabular-nums">{value}</p>
+          {sub && <p className="mt-0.5 truncate text-xs text-muted-foreground">{sub}</p>}
+        </div>
+        <div
+          className={cn(
+            'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+            colorClass === 'info' && 'bg-status-info/15',
+            colorClass === 'success' && 'bg-status-success/15',
+            colorClass === 'transit' && 'bg-status-transit/15',
+            colorClass === 'warning' && 'bg-status-warning/15',
+          )}
+        >
+          <Icon
+            className={cn(
+              'h-4 w-4',
+              colorClass === 'info' && 'text-status-info',
+              colorClass === 'success' && 'text-status-success',
+              colorClass === 'transit' && 'text-status-transit',
+              colorClass === 'warning' && 'text-status-warning',
+            )}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+  return to ? <Link to={to}>{card}</Link> : card;
+}
+
+function ExceptionAlertBanner({ exceptions }: { exceptions: ExceptionRecord[] }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-red-500/50 bg-gradient-to-r from-red-50 to-white px-3 py-2 shadow-sm">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-red-500/15 text-red-600">
+        <AlertTriangle className="h-3.5 w-3.5" />
+      </div>
+      <p className="text-sm font-bold text-red-600">
+        {t('exceptions.banner.activeCount', { count: exceptions.length })}
+      </p>
+      <div className="flex flex-wrap items-center gap-1">
+        {exceptions.slice(0, 5).map((e) => (
+          <Link
+            key={e.id}
+            to={`/app/trips/${e.tripId}`}
+            className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-white px-2 py-0.5 text-xs font-medium transition hover:bg-red-500/5"
+          >
+            <ExceptionBadge type={e.type} withIcon={false} className="!border-0 !bg-transparent !p-0 !text-[11px]" />
+            <span className="font-mono text-foreground">{e.vehiclePlate}</span>
+          </Link>
+        ))}
+      </div>
+      <Link
+        to="/app/incidents"
+        className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-md border border-red-500/40 bg-white px-2 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-500/5"
+      >
+        {t('exceptions.banner.viewAll')}
+      </Link>
+    </div>
+  );
+}
+
+function ActiveExceptionsSection({
+  filter,
+  setFilter,
+  counts,
+  exceptions,
+}: {
+  filter: ExceptionType | 'ALL';
+  setFilter: (k: ExceptionType | 'ALL') => void;
+  counts: Record<ExceptionType, number>;
+  exceptions: ExceptionRecord[];
+}) {
+  const { t } = useTranslation();
+  const chips: Array<{ key: ExceptionType | 'ALL'; label: string; count: number }> = [
+    { key: 'ALL', label: t('common.all'), count: exceptions.length || Object.values(counts).reduce((a, b) => a + b, 0) },
+    { key: 'BREAKDOWN', label: t('exceptions.typeShort.BREAKDOWN'), count: counts.BREAKDOWN },
+    { key: 'ACCIDENT', label: t('exceptions.typeShort.ACCIDENT'), count: counts.ACCIDENT },
+    { key: 'OVERDUE', label: t('exceptions.typeShort.OVERDUE'), count: counts.OVERDUE },
+  ];
+
+  return (
+    <Card className="overflow-hidden rounded-xl border border-amber-500/30">
+      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-3 pb-2">
+        <CardTitle className="flex items-center gap-1.5 text-sm sm:text-base font-semibold">
+          <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+          {t('exceptions.active.heading')}
+        </CardTitle>
+        <div className="flex flex-wrap gap-1">
+          {chips.map((c) => (
+            <button
+              key={c.key}
+              type="button"
+              onClick={() => setFilter(c.key)}
+              className={cn(
+                'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium transition',
+                filter === c.key
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-input bg-background text-muted-foreground hover:bg-muted',
+              )}
+            >
+              {c.label}
+              <span
+                className={cn(
+                  'rounded-full px-1 text-[11px] tabular-nums',
+                  filter === c.key ? 'bg-primary-foreground/20' : 'bg-muted',
+                )}
+              >
+                {c.count}
+              </span>
+            </button>
+          ))}
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <th className="px-2 py-1.5">{t('exceptions.active.columnType')}</th>
+                <th className="px-2 py-1.5">{t('exceptions.active.columnVehicle')}</th>
+                <th className="px-2 py-1.5">{t('exceptions.active.columnRoute')}</th>
+                <th className="px-2 py-1.5">{t('exceptions.active.columnReported')}</th>
+                <th className="px-2 py-1.5">{t('exceptions.active.columnLocation')}</th>
+                <th className="px-2 py-1.5">{t('exceptions.active.columnAction')}</th>
+                <th className="px-2 py-1.5" />
+              </tr>
+            </thead>
+            <tbody>
+              {exceptions.slice(0, 4).map((e) => {
+                const theme = getStatusTheme(e.type);
+                return (
+                  <tr
+                    key={e.id}
+                    className="border-b last:border-b-0 transition-colors hover:bg-muted/40"
+                    style={{
+                      backgroundImage: `linear-gradient(to right, ${theme.hex}0D, transparent 60%)`,
+                    }}
+                  >
+                    <td className="px-2 py-1.5">
+                      <ExceptionBadge type={e.type} status={e.status} />
+                    </td>
+                    <td className="px-2 py-1.5 font-mono text-xs font-semibold">
+                      <span className="inline-flex items-center gap-1">
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: theme.hex }} />
+                        {e.vehiclePlate}
+                      </span>
+                    </td>
+                    <td className="px-2 py-1.5 text-xs text-muted-foreground">
+                      {(e.originName ?? '—') + ' → ' + (e.destinationName ?? '—')}
+                    </td>
+                    <td className="px-2 py-1.5 text-xs text-muted-foreground">
+                      {formatRelativeFromNow(e.reportedAt)}
+                    </td>
+                    <td className="max-w-[200px] truncate px-2 py-1.5 text-xs text-muted-foreground">
+                      {e.location}
+                    </td>
+                    <td className="px-2 py-1.5 text-xs">{getActionNeededText(e)}</td>
+                    <td className="px-2 py-1.5">
+                      <Link to={`/app/trips/${e.tripId}`}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 gap-1 px-2 text-xs"
+                          style={{ borderColor: theme.hex, color: theme.hex }}
+                        >
+                          {t('exceptions.active.manage')}
+                          <ArrowRight className="h-2.5 w-2.5" />
+                        </Button>
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

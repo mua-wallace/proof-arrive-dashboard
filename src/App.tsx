@@ -16,6 +16,8 @@ import IncomingVehicles from './pages/IncomingVehicles';
 import ProcessingStages from './pages/ProcessingStages';
 import Settings from './pages/Settings';
 import AvailableVehicles from './pages/AvailableVehicles';
+import Incidents from './pages/Incidents';
+import TripDetail from './pages/TripDetail';
 import Layout from './components/layout/Layout';
 
 // Create a client
@@ -56,6 +58,8 @@ function App() {
             <Route path="vehicles" element={<Vehicles />} />
             <Route path="available-vehicles" element={<AvailableVehicles />} />
             <Route path="trips" element={<Trips />} />
+            <Route path="trips/:id" element={<TripDetail />} />
+            <Route path="incidents" element={<Incidents />} />
             <Route path="arrivals" element={<Arrivals />} />
             <Route path="exits" element={<Exits />} />
             <Route path="incoming-vehicles" element={<IncomingVehicles />} />

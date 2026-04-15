@@ -188,14 +188,14 @@ export default function AvailableVehicles() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="flex flex-col gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('availableVehicles.title')}</h1>
-          <p className="text-muted-foreground">{t('availableVehicles.loading')}</p>
+          <h1 className="text-base font-bold tracking-tight">{t('availableVehicles.title')}</h1>
+          <p className="text-[11px] text-muted-foreground">{t('availableVehicles.loading')}</p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-48 rounded-xl bg-muted/50 animate-pulse" />
+            <div key={i} className="h-32 rounded-xl bg-muted/50 animate-pulse" />
           ))}
         </div>
       </div>
@@ -203,43 +203,39 @@ export default function AvailableVehicles() {
   }
 
   return (
-    <div className="space-y-6">
-      <header className="rounded-2xl border bg-card/50 px-6 py-5">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-status-success/15">
-              <CheckCircle2 className="h-6 w-6 text-status-success" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('availableVehicles.title')}</h1>
-              <p className="text-muted-foreground">
-                <Trans i18nKey="availableVehicles.subtitle" components={{ strong: <strong /> }} />
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {isAdmin && unassignedGroup && unassignedGroup.vehicles.length > 0 && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => setBulkAssignOpen(true)}
-              >
-                {t('availableVehicles.unassignedButton', { count: unassignedGroup.vehicles.length })}
-              </Button>
-            )}
-            <Badge variant="secondary" className="text-base font-semibold">
-              {t('availableVehicles.totalBadge', { count: totalCount })}
-            </Badge>
-          </div>
+    <div className="flex flex-col gap-3">
+      <header className="flex flex-wrap items-center gap-3 rounded-xl border bg-card/60 px-4 py-2.5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-status-success/15">
+          <CheckCircle2 className="h-4 w-4 text-status-success" />
+        </div>
+        <div className="min-w-0 leading-tight">
+          <h1 className="text-base font-bold tracking-tight">{t('availableVehicles.title')}</h1>
+          <p className="text-[11px] text-muted-foreground">
+            <Trans i18nKey="availableVehicles.subtitle" components={{ strong: <strong /> }} />
+          </p>
+        </div>
+        <div className="ml-auto flex items-center gap-1.5">
+          {isAdmin && unassignedGroup && unassignedGroup.vehicles.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1 text-xs"
+              onClick={() => setBulkAssignOpen(true)}
+            >
+              {t('availableVehicles.unassignedButton', { count: unassignedGroup.vehicles.length })}
+            </Button>
+          )}
+          <Badge variant="secondary" className="text-xs font-semibold">
+            {t('availableVehicles.totalBadge', { count: totalCount })}
+          </Badge>
         </div>
       </header>
 
       {error && (
         <Card className="border-status-warning/50 bg-status-warning/5">
-          <CardContent className="py-4">
-            <p className="text-sm text-foreground">
+          <CardContent className="py-2">
+            <p className="text-xs text-foreground">
               {t('availableVehicles.loadErrorPrefix')} {(error as Error)?.message ?? String(error)}
             </p>
           </CardContent>
@@ -248,13 +244,13 @@ export default function AvailableVehicles() {
 
       {totalCount === 0 && !error && (
         <Card className="border-border">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <Car className="h-12 w-12 text-muted-foreground" />
-            <p className="mt-4 font-medium text-foreground">{t('availableVehicles.emptyTitle')}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
+          <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+            <Car className="h-8 w-8 text-muted-foreground" />
+            <p className="mt-2 text-xs font-medium">{t('availableVehicles.emptyTitle')}</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
               {t('availableVehicles.emptyHint')}
             </p>
-            <Link to="/app/vehicles" className="mt-4 text-sm font-medium text-primary hover:underline">
+            <Link to="/app/vehicles" className="mt-2 text-[11px] font-medium text-primary hover:underline">
               {t('availableVehicles.viewAllLink')}
             </Link>
           </CardContent>
@@ -262,11 +258,11 @@ export default function AvailableVehicles() {
       )}
 
       {assignedGroups.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground">
+        <section className="flex flex-col gap-2">
+          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             {t('availableVehicles.availableByCenter')}
           </h2>
-          <div className="grid gap-3 items-start sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid items-start gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {assignedGroups.map(({ centerId, centerName, vehicles: vs }, index) => {
               const isExpanded = expandedCenterIds.has(centerId);
               const rowIndex = Math.floor(index / COLS_PER_ROW);
@@ -277,18 +273,18 @@ export default function AvailableVehicles() {
               const hasMore = vs.length > maxVisibleInRow;
               return (
               <Card key={centerId} className="border-border bg-card">
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center justify-between gap-2 text-sm font-semibold text-foreground">
-                    <span className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-primary" />
+                <CardHeader className="p-3 pb-1">
+                  <CardTitle className="flex items-center justify-between gap-2 text-xs font-semibold">
+                    <span className="flex items-center gap-1.5">
+                      <Building2 className="h-3.5 w-3.5 text-primary" />
                       <span className="truncate">{centerName}</span>
                     </span>
-                    <Badge variant="outline" className="text-[11px] font-medium">
+                    <Badge variant="outline" className="text-[10px] font-medium">
                       {t('availableVehicles.countBadge', { count: vs.length })}
                     </Badge>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-1">
+                <CardContent className="p-3 pt-1">
                   <div className="rounded-md border bg-muted/10">
                     <ul className="divide-y">
                       {visible.map((v) => (
