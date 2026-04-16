@@ -28,7 +28,6 @@ import {
   Calendar,
   Loader2,
   AlertCircle,
-  Sparkles,
   Sliders,
   RefreshCw,
   Search,
