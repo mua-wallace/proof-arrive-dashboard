@@ -93,7 +93,11 @@
     "CLOSED_RETURNED": "Closed — returned",
     "ESCALATED": "No-show / Escalated",
     "RESCUE": "Rescue trip",
-    "IN_PROGRESS": "In progress"
+    "IN_PROGRESS": "In progress",
+    "POLICE_STOP": "Police stop",
+    "OTHER": "Other",
+    "TRANSFER_IN_PROGRESS": "Transfer in progress",
+    "NO_SHOW_ESCALATED": "No-show escalated"
   },
   "trips": {
     "title": "Trips",
@@ -634,13 +638,17 @@
       "BREAKDOWN": "Vehicle breakdown",
       "ACCIDENT": "Road accident",
       "OVERDUE": "Overdue trip",
-      "TRANSFER": "Goods transfer"
+      "TRANSFER": "Goods transfer",
+      "POLICE_STOP": "Police stop",
+      "OTHER": "Other issue"
     },
     "typeShort": {
       "BREAKDOWN": "Breakdown",
       "ACCIDENT": "Accident",
       "OVERDUE": "Overdue",
-      "TRANSFER": "Transfer"
+      "TRANSFER": "Transfer",
+      "POLICE_STOP": "Police",
+      "OTHER": "Other"
     },
     "severity": {
       "MINOR": "Minor",
@@ -818,6 +826,26 @@
       "text": "Note",
       "submit": "Add note"
     },
+    "dispatchRescue": {
+      "description": "Select an available vehicle to dispatch for goods transfer.",
+      "selectVehicle": "Rescue vehicle",
+      "selectPlaceholder": "-- Select vehicle --",
+      "transferLocation": "Transfer location",
+      "estimatedArrival": "Estimated arrival",
+      "notes": "Notes",
+      "submit": "Dispatch rescue vehicle"
+    },
+    "confirmTransfer": {
+      "title": "Confirm transfer",
+      "description": "Confirm that goods have been transferred to the rescue vehicle.",
+      "cargoCount": "Cargo count transferred",
+      "cargoCondition": "Cargo condition",
+      "conditionGood": "Good",
+      "conditionMinorDamage": "Minor damage",
+      "conditionMajorDamage": "Major damage",
+      "notes": "Notes",
+      "submit": "Confirm transfer"
+    },
     "detail": {
       "summary": "Exception summary",
       "location": "Location",
@@ -856,7 +884,9 @@
       "etaUpdated": "Expected arrival updated",
       "returned": "Returned to origin",
       "escalated": "Exception escalated",
-      "noteAdded": "Note added"
+      "noteAdded": "Note added",
+      "rescueDispatched": "Rescue vehicle dispatched",
+      "transferConfirmed": "Transfer confirmed"
     }
   },
   "tripDetail": {

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -13,11 +14,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { useExceptionsStore } from '@/stores/exceptions.store';
 import { useAuthStore } from '@/stores/auth.store';
-import { toast } from '@/lib/toast';
+import { dashboardApi } from '@/api/dashboard';
+import {
+  useDispatchTechnician,
+  useMarkRepaired,
+  useLogCallAttempt,
+  useSetTripEta,
+  useReturnToOrigin,
+  useEscalateException,
+  useAddExceptionNote,
+  useDispatchRescueVehicle,
+} from '@/hooks/useExceptions';
 import { cn } from '@/lib/utils';
 import type { ContactOutcome } from '@/types/exceptions';
+import { Loader2 } from 'lucide-react';
 
 const textareaClass =
   'flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
@@ -33,28 +44,41 @@ interface BaseProps {
   exceptionId: string;
 }
 
+interface EtaDialogProps extends BaseProps {
+  tripId: number | string;
+}
+
+// ---------------------------------------------------------------------------
+// Dispatch Technician
+// ---------------------------------------------------------------------------
+
 export function DispatchTechnicianDialog({ open, onOpenChange, exceptionId }: BaseProps) {
   const { t } = useTranslation();
-  const by = useBy();
-  const dispatchTechnician = useExceptionsStore((s) => s.dispatchTechnician);
+  const mutation = useDispatchTechnician();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [etaText, setEtaText] = useState('');
   const [notes, setNotes] = useState('');
 
+  function reset() {
+    setName(''); setPhone(''); setEtaText(''); setNotes('');
+  }
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!name.trim() || !etaText.trim()) return;
-    dispatchTechnician(exceptionId, { name: name.trim(), phone: phone.trim(), etaText: etaText.trim() }, by);
-    if (notes.trim()) {
-      useExceptionsStore.getState().addNote(exceptionId, notes.trim(), by);
-    }
-    toast.success(t('exceptions.toasts.technicianDispatched'));
-    onOpenChange(false);
-    setName('');
-    setPhone('');
-    setEtaText('');
-    setNotes('');
+    mutation.mutate(
+      {
+        id: exceptionId,
+        data: {
+          technicianName: name.trim(),
+          technicianPhone: phone.trim(),
+          estimatedArrival: etaText.trim(),
+          notes: notes.trim() || undefined,
+        },
+      },
+      { onSuccess: () => { onOpenChange(false); reset(); } },
+    );
   }
 
   return (
@@ -98,7 +122,10 @@ export function DispatchTechnicianDialog({ open, onOpenChange, exceptionId }: Ba
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('common.cancel')}
             </Button>
-            <Button type="submit">{t('exceptions.dispatchTechnician.submit')}</Button>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t('exceptions.dispatchTechnician.submit')}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -106,26 +133,36 @@ export function DispatchTechnicianDialog({ open, onOpenChange, exceptionId }: Ba
   );
 }
 
+// ---------------------------------------------------------------------------
+// Mark Repaired
+// ---------------------------------------------------------------------------
+
 export function MarkRepairedDialog({ open, onOpenChange, exceptionId }: BaseProps) {
   const { t } = useTranslation();
   const by = useBy();
-  const markRepaired = useExceptionsStore((s) => s.markRepaired);
+  const mutation = useMarkRepaired();
   const [repairedBy, setRepairedBy] = useState(by);
   const [description, setDescription] = useState('');
   const [repairRef, setRepairRef] = useState('');
 
+  function reset() {
+    setDescription(''); setRepairRef('');
+  }
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!description.trim()) return;
-    markRepaired(exceptionId, {
-      repairedBy: repairedBy || by,
-      description: description.trim(),
-      repairRef: repairRef.trim() || undefined,
-    });
-    toast.success(t('exceptions.toasts.repaired'), t('exceptions.toasts.repairedDesc'));
-    onOpenChange(false);
-    setDescription('');
-    setRepairRef('');
+    mutation.mutate(
+      {
+        id: exceptionId,
+        data: {
+          repairedBy: repairedBy || by,
+          description: description.trim(),
+          repairReference: repairRef.trim() || undefined,
+        },
+      },
+      { onSuccess: () => { onOpenChange(false); reset(); } },
+    );
   }
 
   return (
@@ -160,7 +197,10 @@ export function MarkRepairedDialog({ open, onOpenChange, exceptionId }: BaseProp
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('common.cancel')}
             </Button>
-            <Button type="submit">{t('exceptions.markRepaired.submit')}</Button>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t('exceptions.markRepaired.submit')}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -168,20 +208,31 @@ export function MarkRepairedDialog({ open, onOpenChange, exceptionId }: BaseProp
   );
 }
 
+// ---------------------------------------------------------------------------
+// Log Contact Attempt
+// ---------------------------------------------------------------------------
+
 export function LogContactAttemptDialog({ open, onOpenChange, exceptionId }: BaseProps) {
   const { t } = useTranslation();
-  const by = useBy();
-  const addAttempt = useExceptionsStore((s) => s.addContactAttempt);
+  const mutation = useLogCallAttempt();
   const [outcome, setOutcome] = useState<ContactOutcome>('NO_ANSWER');
   const [notes, setNotes] = useState('');
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    addAttempt(exceptionId, { by, outcome, notes: notes.trim() || undefined });
-    toast.success(t('exceptions.toasts.contactLogged'));
-    onOpenChange(false);
-    setOutcome('NO_ANSWER');
-    setNotes('');
+    mutation.mutate(
+      {
+        id: exceptionId,
+        data: { outcome, notes: notes.trim() || undefined },
+      },
+      {
+        onSuccess: () => {
+          onOpenChange(false);
+          setOutcome('NO_ANSWER');
+          setNotes('');
+        },
+      },
+    );
   }
 
   return (
@@ -233,7 +284,10 @@ export function LogContactAttemptDialog({ open, onOpenChange, exceptionId }: Bas
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('common.cancel')}
             </Button>
-            <Button type="submit">{t('exceptions.logContact.submit')}</Button>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t('exceptions.logContact.submit')}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -241,19 +295,22 @@ export function LogContactAttemptDialog({ open, onOpenChange, exceptionId }: Bas
   );
 }
 
-export function UpdateETADialog({ open, onOpenChange, exceptionId }: BaseProps) {
+// ---------------------------------------------------------------------------
+// Update ETA
+// ---------------------------------------------------------------------------
+
+export function UpdateETADialog({ open, onOpenChange, tripId }: EtaDialogProps) {
   const { t } = useTranslation();
-  const by = useBy();
-  const updateETA = useExceptionsStore((s) => s.updateExpectedArrival);
+  const mutation = useSetTripEta();
   const [eta, setEta] = useState('');
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!eta) return;
-    updateETA(exceptionId, new Date(eta).toISOString(), by);
-    toast.success(t('exceptions.toasts.etaUpdated'));
-    onOpenChange(false);
-    setEta('');
+    mutation.mutate(
+      { tripId, estimatedArrivalAt: new Date(eta).toISOString() },
+      { onSuccess: () => { onOpenChange(false); setEta(''); } },
+    );
   }
 
   return (
@@ -279,7 +336,10 @@ export function UpdateETADialog({ open, onOpenChange, exceptionId }: BaseProps) 
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('common.cancel')}
             </Button>
-            <Button type="submit">{t('exceptions.updateEta.submit')}</Button>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t('exceptions.updateEta.submit')}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -287,19 +347,22 @@ export function UpdateETADialog({ open, onOpenChange, exceptionId }: BaseProps) 
   );
 }
 
+// ---------------------------------------------------------------------------
+// Return To Origin
+// ---------------------------------------------------------------------------
+
 export function ReturnToOriginDialog({ open, onOpenChange, exceptionId }: BaseProps) {
   const { t } = useTranslation();
-  const by = useBy();
-  const returnToOrigin = useExceptionsStore((s) => s.returnToOrigin);
+  const mutation = useReturnToOrigin();
   const [reason, setReason] = useState('');
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!reason.trim()) return;
-    returnToOrigin(exceptionId, reason.trim(), by);
-    toast.success(t('exceptions.toasts.returned'));
-    onOpenChange(false);
-    setReason('');
+    mutation.mutate(
+      { id: exceptionId, data: { reason: reason.trim() } },
+      { onSuccess: () => { onOpenChange(false); setReason(''); } },
+    );
   }
 
   return (
@@ -326,7 +389,8 @@ export function ReturnToOriginDialog({ open, onOpenChange, exceptionId }: BasePr
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('common.cancel')}
             </Button>
-            <Button type="submit" variant="destructive">
+            <Button type="submit" variant="destructive" disabled={mutation.isPending}>
+              {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t('exceptions.returnOrigin.submit')}
             </Button>
           </DialogFooter>
@@ -336,11 +400,14 @@ export function ReturnToOriginDialog({ open, onOpenChange, exceptionId }: BasePr
   );
 }
 
+// ---------------------------------------------------------------------------
+// Escalate
+// ---------------------------------------------------------------------------
+
 export function EscalateDialog({ open, onOpenChange, exceptionId }: BaseProps) {
   const { t } = useTranslation();
-  const by = useBy();
-  const escalate = useExceptionsStore((s) => s.escalate);
-  const [reason, setReason] = useState('Driver unreachable');
+  const mutation = useEscalateException();
+  const [reason, setReason] = useState<'DRIVER_UNREACHABLE' | 'SUSPECTED_BREAKDOWN' | 'SUSPECTED_ACCIDENT' | 'UNKNOWN'>('DRIVER_UNREACHABLE');
   const [attempts, setAttempts] = useState(2);
   const [notes, setNotes] = useState('');
   const [policeRef, setPoliceRef] = useState('');
@@ -350,24 +417,26 @@ export function EscalateDialog({ open, onOpenChange, exceptionId }: BaseProps) {
     setActions((cur) => (cur.includes(a) ? cur.filter((x) => x !== a) : [...cur, a]));
   }
 
+  function reset() {
+    setReason('DRIVER_UNREACHABLE'); setAttempts(2); setNotes(''); setPoliceRef(''); setActions([]);
+  }
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!notes.trim()) return;
-    escalate(exceptionId, {
-      reason,
-      attempts,
-      notes: notes.trim(),
-      actions,
-      policeRef: policeRef.trim() || undefined,
-      by,
-    });
-    toast.success(t('exceptions.toasts.escalated'));
-    onOpenChange(false);
-    setReason('Driver unreachable');
-    setAttempts(2);
-    setNotes('');
-    setPoliceRef('');
-    setActions([]);
+    mutation.mutate(
+      {
+        id: exceptionId,
+        data: {
+          reason,
+          contactAttemptsMade: attempts,
+          notes: notes.trim(),
+          actionsTaken: actions.length > 0 ? actions : undefined,
+          policeReportReference: policeRef.trim() || undefined,
+        },
+      },
+      { onSuccess: () => { onOpenChange(false); reset(); } },
+    );
   }
 
   return (
@@ -381,11 +450,11 @@ export function EscalateDialog({ open, onOpenChange, exceptionId }: BaseProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="esc-reason">{t('exceptions.escalate.reason')}</Label>
-            <Select id="esc-reason" value={reason} onChange={(e) => setReason(e.target.value)}>
-              <option value="Driver unreachable">{t('exceptions.escalate.reasonDriverUnreachable')}</option>
-              <option value="Suspected breakdown">{t('exceptions.escalate.reasonSuspectedBreakdown')}</option>
-              <option value="Suspected accident">{t('exceptions.escalate.reasonSuspectedAccident')}</option>
-              <option value="Unknown">{t('exceptions.escalate.reasonUnknown')}</option>
+            <Select id="esc-reason" value={reason} onChange={(e) => setReason(e.target.value as typeof reason)}>
+              <option value="DRIVER_UNREACHABLE">{t('exceptions.escalate.reasonDriverUnreachable')}</option>
+              <option value="SUSPECTED_BREAKDOWN">{t('exceptions.escalate.reasonSuspectedBreakdown')}</option>
+              <option value="SUSPECTED_ACCIDENT">{t('exceptions.escalate.reasonSuspectedAccident')}</option>
+              <option value="UNKNOWN">{t('exceptions.escalate.reasonUnknown')}</option>
             </Select>
           </div>
           <div className="space-y-2">
@@ -413,15 +482,15 @@ export function EscalateDialog({ open, onOpenChange, exceptionId }: BaseProps) {
             <Label>{t('exceptions.escalate.actions')}</Label>
             <div className="space-y-1">
               {[
-                { key: 'police', label: t('exceptions.escalate.actionPolice') },
-                { key: 'management', label: t('exceptions.escalate.actionManagement') },
-                { key: 'replacement', label: t('exceptions.escalate.actionReplacement') },
+                { key: 'REPORTED_TO_POLICE', label: t('exceptions.escalate.actionPolice') },
+                { key: 'NOTIFIED_MANAGEMENT', label: t('exceptions.escalate.actionManagement') },
+                { key: 'DISPATCHED_REPLACEMENT', label: t('exceptions.escalate.actionReplacement') },
               ].map((a) => (
                 <label key={a.key} className="flex items-center gap-2 text-sm text-muted-foreground">
                   <input
                     type="checkbox"
-                    checked={actions.includes(a.label)}
-                    onChange={() => toggle(a.label)}
+                    checked={actions.includes(a.key)}
+                    onChange={() => toggle(a.key)}
                     className="h-4 w-4 rounded border-input"
                   />
                   {a.label}
@@ -437,7 +506,8 @@ export function EscalateDialog({ open, onOpenChange, exceptionId }: BaseProps) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('common.cancel')}
             </Button>
-            <Button type="submit" variant="destructive">
+            <Button type="submit" variant="destructive" disabled={mutation.isPending}>
+              {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t('exceptions.escalate.submit')}
             </Button>
           </DialogFooter>
@@ -447,19 +517,22 @@ export function EscalateDialog({ open, onOpenChange, exceptionId }: BaseProps) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Add Note
+// ---------------------------------------------------------------------------
+
 export function AddNoteDialog({ open, onOpenChange, exceptionId }: BaseProps) {
   const { t } = useTranslation();
-  const by = useBy();
-  const addNote = useExceptionsStore((s) => s.addNote);
+  const mutation = useAddExceptionNote();
   const [text, setText] = useState('');
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!text.trim()) return;
-    addNote(exceptionId, text.trim(), by);
-    toast.success(t('exceptions.toasts.noteAdded'));
-    onOpenChange(false);
-    setText('');
+    mutation.mutate(
+      { id: exceptionId, data: { text: text.trim() } },
+      { onSuccess: () => { onOpenChange(false); setText(''); } },
+    );
   }
 
   return (
@@ -486,7 +559,134 @@ export function AddNoteDialog({ open, onOpenChange, exceptionId }: BaseProps) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('common.cancel')}
             </Button>
-            <Button type="submit">{t('exceptions.addNote.submit')}</Button>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t('exceptions.addNote.submit')}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Dispatch Rescue Vehicle (NEW)
+// ---------------------------------------------------------------------------
+
+export function DispatchRescueVehicleDialog({ open, onOpenChange, exceptionId }: BaseProps) {
+  const { t } = useTranslation();
+  const mutation = useDispatchRescueVehicle();
+
+  const { data: availableVehicles, isLoading: vehiclesLoading } = useQuery({
+    queryKey: ['vehicles-by-status', 'AVAILABLE'],
+    queryFn: () => dashboardApi.getVehiclesByStatus('available'),
+    enabled: open,
+  });
+
+  const [vehicleId, setVehicleId] = useState<number | ''>('');
+  const [transferLocation, setTransferLocation] = useState('');
+  const [estimatedArrival, setEstimatedArrival] = useState('');
+  const [notes, setNotes] = useState('');
+
+  function reset() {
+    setVehicleId(''); setTransferLocation(''); setEstimatedArrival(''); setNotes('');
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!vehicleId || !transferLocation.trim()) return;
+    mutation.mutate(
+      {
+        id: exceptionId,
+        data: {
+          rescueVehicleId: vehicleId as number,
+          transferLocation: transferLocation.trim(),
+          estimatedArrival: estimatedArrival || undefined,
+          notes: notes.trim() || undefined,
+        },
+      },
+      { onSuccess: () => { onOpenChange(false); reset(); } },
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogClose onClick={() => onOpenChange(false)} />
+      <DialogContent className="w-full max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t('exceptions.actions.dispatchRescue')}</DialogTitle>
+          <DialogDescription>
+            {t('exceptions.dispatchRescue.description', 'Select an available vehicle to dispatch for goods transfer.')}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="rescue-vehicle">
+              {t('exceptions.dispatchRescue.selectVehicle', 'Rescue vehicle')}
+            </Label>
+            {vehiclesLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t('common.loading')}
+              </div>
+            ) : (
+              <Select
+                id="rescue-vehicle"
+                value={String(vehicleId)}
+                onChange={(e) => setVehicleId(e.target.value ? Number(e.target.value) : '')}
+                required
+              >
+                <option value="">{t('exceptions.dispatchRescue.selectPlaceholder', '-- Select vehicle --')}</option>
+                {(availableVehicles ?? []).map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.plate} {v.brand ? `— ${v.brand} ${v.model}` : v.model ? `— ${v.model}` : ''}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="transfer-location">
+              {t('exceptions.dispatchRescue.transferLocation', 'Transfer location')}
+            </Label>
+            <Input
+              id="transfer-location"
+              placeholder={t('exceptions.form.locationPlaceholder')}
+              value={transferLocation}
+              onChange={(e) => setTransferLocation(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="rescue-eta">
+              {t('exceptions.dispatchRescue.estimatedArrival', 'Estimated arrival')}
+            </Label>
+            <Input
+              id="rescue-eta"
+              placeholder={t('exceptions.dispatchTechnician.etaPlaceholder')}
+              value={estimatedArrival}
+              onChange={(e) => setEstimatedArrival(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="rescue-notes">{t('exceptions.dispatchRescue.notes', 'Notes')}</Label>
+            <textarea
+              id="rescue-notes"
+              className={textareaClass}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" disabled={mutation.isPending || vehiclesLoading || !vehicleId}>
+              {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t('exceptions.dispatchRescue.submit', 'Dispatch rescue vehicle')}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

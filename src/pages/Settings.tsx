@@ -65,11 +65,11 @@ function UserDetailsCard({ user, t }: { user: CurrentUser; t: TFunction }) {
       <div className="h-20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent" />
       <CardHeader className="pb-2">
         <div className="flex items-start gap-4 -mt-12">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-4 border-card bg-primary text-lg font-semibold text-primary-foreground shadow-lg">
+          <div className="flex h-12 w-12 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-full border-4 border-card bg-primary text-base sm:text-lg font-semibold text-primary-foreground shadow-lg">
             {initials}
           </div>
           <div className="flex-1 min-w-0 pt-1">
-            <CardTitle className="text-xl flex items-center gap-2 flex-wrap">
+            <CardTitle className="text-base sm:text-xl flex items-center gap-2 flex-wrap">
               {displayName}
               {user.role && (
                 <Badge variant="secondary" className="font-normal">
@@ -83,12 +83,12 @@ function UserDetailsCard({ user, t }: { user: CurrentUser; t: TFunction }) {
         </div>
       </CardHeader>
       <Separator />
-      <CardContent className="pt-6">
-        <dl className="grid gap-4 sm:grid-cols-2">
+      <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+        <dl className="grid gap-2 sm:gap-4 sm:grid-cols-2">
           {details.map(({ label, value, icon: Icon }) => (
             <div
               key={label}
-              className="flex items-start gap-3 rounded-lg border bg-muted/30 px-4 py-3"
+              className="flex items-start gap-2 sm:gap-3 rounded-lg border bg-muted/30 px-3 py-2 sm:px-4 sm:py-3"
             >
               <Icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
               <div className="min-w-0 flex-1">
@@ -186,7 +186,7 @@ export default function Settings() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card/60 px-4 py-2.5">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 rounded-xl border bg-card/60 px-3 sm:px-4 py-2.5">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
           <SettingsIcon className="h-4 w-4 text-primary" />
         </div>
@@ -212,7 +212,7 @@ export default function Settings() {
           </AlertDescription>
         </Alert>
       ) : currentUser ? (
-        <div className="grid gap-3 lg:grid-cols-[340px_1fr]">
+        <div className="grid gap-3 md:grid-cols-[280px_1fr] lg:grid-cols-[340px_1fr]">
           <UserDetailsCard user={currentUser} t={t} />
           <div className="flex flex-col gap-3">
             {canManageGroups && (
@@ -309,8 +309,8 @@ export default function Settings() {
                   )}
 
                   {groupsData && (
-                    <div className="rounded-md border p-4 space-y-3">
-                      <div className="flex items-center justify-between">
+                    <div className="rounded-md border p-3 sm:p-4 space-y-3">
+                      <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-1">
                         <p className="text-sm font-medium">
                           {t('settings.groups.found', { count: groupsData.meta?.totalItems ?? 0 })}
                         </p>
@@ -320,14 +320,14 @@ export default function Settings() {
                       </div>
                       {groupsData.data && groupsData.data.length > 0 ? (
                         <>
-                          <div className="space-y-2 max-h-60 overflow-y-auto">
+                          <div className="space-y-2 max-h-60 overflow-y-auto -mx-1 px-1">
                             {groupsData.data.map((group: VehicleGroup) => (
                               <div
                                 key={group.groupId}
-                                className="flex items-center justify-between p-2 rounded border bg-muted/30"
+                                className="flex items-center justify-between p-2 rounded border bg-muted/30 gap-2"
                               >
-                                <div>
-                                  <p className="text-sm font-medium">{group.groupName}</p>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium truncate">{group.groupName}</p>
                                   <p className="text-xs text-muted-foreground">
                                     {t('settings.groups.vehiclesCount', { count: group.total })}
                                   </p>
@@ -336,17 +336,18 @@ export default function Settings() {
                             ))}
                           </div>
                           {groupsData.meta && groupsData.meta.totalPages > 1 && (
-                            <div className="flex items-center justify-between pt-2 border-t">
+                            <div className="flex items-center justify-between pt-2 border-t gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setGroupsPage((p) => Math.max(1, p - 1))}
                                 disabled={groupsPage === 1 || groupsLoading}
+                                className="shrink-0"
                               >
                                 <ChevronLeft className="h-4 w-4" />
-                                {t('settings.groups.previous')}
+                                <span className="hidden sm:inline">{t('settings.groups.previous')}</span>
                               </Button>
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-xs text-muted-foreground text-center">
                                 {t('settings.groups.pageOf', { page: groupsPage, total: groupsData.meta.totalPages })}
                               </span>
                               <Button
@@ -354,8 +355,9 @@ export default function Settings() {
                                 size="sm"
                                 onClick={() => setGroupsPage((p) => Math.min(groupsData.meta!.totalPages, p + 1))}
                                 disabled={groupsPage === groupsData.meta!.totalPages || groupsLoading}
+                                className="shrink-0"
                               >
-                                {t('settings.groups.next')}
+                                <span className="hidden sm:inline">{t('settings.groups.next')}</span>
                                 <ChevronRight className="h-4 w-4" />
                               </Button>
                             </div>

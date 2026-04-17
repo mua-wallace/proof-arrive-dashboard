@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -18,22 +20,22 @@ import {
   CheckCircle2,
   Siren,
   Clock,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
 } from 'lucide-react';
-import {
-  useExceptionsStore,
-  countActiveByType,
-  selectResolvedTodayCount,
-} from '@/stores/exceptions.store';
-import { ACTIVE_STATUSES, CLOSED_STATUSES } from '@/types/exceptions';
-import type { ExceptionRecord, ExceptionType } from '@/types/exceptions';
+import { useExceptions, useExceptionsSummary } from '@/hooks/useExceptions';
+import type { ExceptionRecord, ExceptionType, ExceptionsQuery } from '@/types/exceptions';
 import { ExceptionBadge } from '@/components/exceptions/ExceptionBadge';
 import { getStatusStyle, getStatusTheme } from '@/lib/status-theme';
+import { displayReportedBy } from '@/components/exceptions/helpers';
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
 type FilterKey = 'all' | 'active' | 'resolved' | ExceptionType;
 
-const TYPE_ICONS: Record<ExceptionType, typeof Wrench> = {
+const TYPE_ICONS: Record<string, typeof Wrench> = {
   BREAKDOWN: Wrench,
   ACCIDENT: AlertTriangle,
   OVERDUE: Clock,
@@ -43,28 +45,26 @@ const TYPE_ICONS: Record<ExceptionType, typeof Wrench> = {
 export default function Incidents() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const exceptions = useExceptionsStore((s) => s.exceptions);
-  const counts = useExceptionsStore((s) => countActiveByType(s));
-  const resolvedToday = useExceptionsStore((s) => selectResolvedTodayCount(s));
 
   const [filter, setFilter] = useState<FilterKey>('all');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const limit = 20;
 
-  const filtered = useMemo(() => {
-    return exceptions.filter((e) => {
-      if (filter === 'all') return true;
-      if (filter === 'active') return ACTIVE_STATUSES.includes(e.status);
-      if (filter === 'resolved') return CLOSED_STATUSES.includes(e.status);
-      return e.type === filter;
-    });
-  }, [exceptions, filter]);
+  // Build query params based on filter
+  const queryParams: ExceptionsQuery = { page, limit };
+  if (search) queryParams.search = search;
+  if (filter === 'active') queryParams.status = 'ACTIVE';
+  else if (filter === 'resolved') queryParams.status = 'RESOLVED';
+  else if (filter !== 'all') queryParams.type = filter as ExceptionType;
 
-  function filterCount(key: FilterKey): number {
-    if (key === 'all') return exceptions.length;
-    if (key === 'active') return exceptions.filter((e) => ACTIVE_STATUSES.includes(e.status)).length;
-    if (key === 'resolved')
-      return exceptions.filter((e) => CLOSED_STATUSES.includes(e.status)).length;
-    return exceptions.filter((e) => e.type === key).length;
-  }
+  const { data: exceptionsData, isLoading } = useExceptions(queryParams);
+  const { data: summary } = useExceptionsSummary();
+
+  const filtered = exceptionsData?.data ?? [];
+  const meta = exceptionsData?.meta;
+  const totalItems = meta?.totalItems ?? 0;
+  const totalPages = meta?.totalPages ?? 1;
 
   const chips: { key: FilterKey; labelKey: string }[] = [
     { key: 'all', labelKey: 'exceptions.incidents.filters.all' },
@@ -91,47 +91,57 @@ export default function Incidents() {
       <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           labelKey="exceptions.incidents.kpiBreakdowns"
-          value={counts.BREAKDOWN}
+          value={summary?.breakdowns ?? 0}
           icon={Wrench}
           hex="#F59E0B"
         />
         <KpiCard
           labelKey="exceptions.incidents.kpiAccidents"
-          value={counts.ACCIDENT}
+          value={summary?.accidents ?? 0}
           icon={AlertTriangle}
           hex="#EF4444"
         />
         <KpiCard
           labelKey="exceptions.incidents.kpiTransfers"
-          value={counts.TRANSFER}
+          value={summary?.transfers ?? 0}
           icon={Repeat}
           hex="#3B82F6"
         />
         <KpiCard
           labelKey="exceptions.incidents.kpiResolvedToday"
-          value={resolvedToday}
+          value={summary?.resolvedToday ?? 0}
           icon={CheckCircle2}
           hex="#10B981"
         />
       </section>
 
       <Card className="overflow-hidden rounded-xl">
-        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-3 pb-2">
-          <div className="min-w-0">
-            <CardTitle className="text-sm font-semibold">{t('exceptions.incidents.listTitle')}</CardTitle>
-            <CardDescription className="text-[11px]">
-              {t('exceptions.incidents.listDescription', { count: filtered.length })}
-            </CardDescription>
+        <CardHeader className="flex flex-col gap-2 space-y-0 p-3 pb-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="min-w-0">
+              <CardTitle className="text-sm font-semibold">{t('exceptions.incidents.listTitle')}</CardTitle>
+              <CardDescription className="text-[11px]">
+                {t('exceptions.incidents.listDescription', { count: totalItems })}
+              </CardDescription>
+            </div>
+            <div className="relative w-full sm:w-60">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder={t('common.search', 'Search...')}
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                className="h-8 pl-8 text-xs"
+              />
+            </div>
           </div>
           <div className="flex flex-wrap gap-1">
             {chips.map((chip) => {
-              const count = filterCount(chip.key);
               const active = filter === chip.key;
               return (
                 <button
                   key={chip.key}
                   type="button"
-                  onClick={() => setFilter(chip.key)}
+                  onClick={() => { setFilter(chip.key); setPage(1); }}
                   className={cn(
                     'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition',
                     active
@@ -140,25 +150,24 @@ export default function Incidents() {
                   )}
                 >
                   {t(chip.labelKey)}
-                  <span
-                    className={cn(
-                      'rounded-full px-1 text-[9px] tabular-nums',
-                      active ? 'bg-primary-foreground/20' : 'bg-muted',
-                    )}
-                  >
-                    {count}
-                  </span>
                 </button>
               );
             })}
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {filtered.length === 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 py-6 text-center">
               <AlertTriangle className="h-6 w-6 text-muted-foreground" />
               <p className="mt-1.5 text-xs font-medium text-muted-foreground">
                 {t('exceptions.incidents.empty')}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {t('exceptions.incidents.emptyHint')}
               </p>
             </div>
           ) : (
@@ -185,6 +194,34 @@ export default function Incidents() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t px-3 py-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1 || isLoading}
+                className="h-7 text-xs"
+              >
+                <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                {t('common.previous', 'Previous')}
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                {page} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages || isLoading}
+                className="h-7 text-xs"
+              >
+                {t('common.next', 'Next')}
+                <ChevronRight className="h-3.5 w-3.5 ml-1" />
+              </Button>
             </div>
           )}
         </CardContent>
@@ -266,13 +303,13 @@ function IncidentRow({
           className="font-mono text-[10px]"
           style={getStatusStyle('#94A3B8')}
         >
-          {exception.id}
+          {exception.incidentReference ?? exception.id}
         </Badge>
       </TableCell>
       <TableCell className="max-w-[280px] truncate py-1.5 text-xs text-muted-foreground">
         {exception.location}
       </TableCell>
-      <TableCell className="py-1.5 text-xs">{exception.reportedBy}</TableCell>
+      <TableCell className="py-1.5 text-xs">{displayReportedBy(exception.reportedBy)}</TableCell>
       <TableCell className="py-1.5 text-xs text-muted-foreground">
         {formatDate(exception.reportedAt)}
       </TableCell>

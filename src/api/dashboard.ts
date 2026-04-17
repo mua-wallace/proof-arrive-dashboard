@@ -1,4 +1,19 @@
 import { apiClient } from './client';
+import type {
+  ExceptionRecord,
+  ExceptionSummary,
+  ExceptionsQuery,
+  TimelineEvent,
+  ReportExceptionInput,
+  DispatchTechnicianInput,
+  MarkRepairedInput,
+  DispatchRescueInput,
+  ConfirmTransferInput,
+  ReturnToOriginInput,
+  LogCallAttemptInput,
+  EscalateInput,
+  AddNoteInput,
+} from '@/types/exceptions';
 
 export interface PaginateQuery {
   page?: number;
@@ -726,6 +741,91 @@ export const dashboardApi = {
 
   getCenterById: async (id: number): Promise<any> => {
     const response = await apiClient.get(`/centers/${id}`);
+    return response.data;
+  },
+
+  // --- Exceptions ---
+
+  getExceptions: async (params?: ExceptionsQuery): Promise<PaginateResult<ExceptionRecord>> => {
+    const response = await apiClient.get<PaginateResult<ExceptionRecord>>('/exceptions', { params });
+    return response.data;
+  },
+
+  getActiveExceptions: async (): Promise<ExceptionRecord[]> => {
+    const response = await apiClient.get<ExceptionRecord[]>('/exceptions/active');
+    const raw = response.data;
+    return Array.isArray(raw) ? raw : (raw as any)?.data ?? [];
+  },
+
+  getExceptionsSummary: async (): Promise<ExceptionSummary> => {
+    const response = await apiClient.get<ExceptionSummary>('/exceptions/summary');
+    return response.data;
+  },
+
+  getExceptionsByTrip: async (tripId: number | string): Promise<ExceptionRecord[]> => {
+    const response = await apiClient.get<ExceptionRecord[]>(`/exceptions/trip/${tripId}`);
+    const raw = response.data;
+    return Array.isArray(raw) ? raw : (raw as any)?.data ?? [];
+  },
+
+  getException: async (id: string): Promise<ExceptionRecord> => {
+    const response = await apiClient.get<ExceptionRecord>(`/exceptions/${id}`);
+    return response.data;
+  },
+
+  getExceptionTimeline: async (id: string): Promise<TimelineEvent[]> => {
+    const response = await apiClient.get<TimelineEvent[]>(`/exceptions/${id}/timeline`);
+    const raw = response.data;
+    return Array.isArray(raw) ? raw : (raw as any)?.data ?? [];
+  },
+
+  reportException: async (tripId: number | string, data: ReportExceptionInput): Promise<ExceptionRecord> => {
+    const response = await apiClient.post<ExceptionRecord>(`/exceptions/trips/${tripId}/report`, data);
+    return response.data;
+  },
+
+  dispatchTechnician: async (id: string, data: DispatchTechnicianInput): Promise<ExceptionRecord> => {
+    const response = await apiClient.post<ExceptionRecord>(`/exceptions/${id}/dispatch-technician`, data);
+    return response.data;
+  },
+
+  markRepaired: async (id: string, data: MarkRepairedInput): Promise<ExceptionRecord> => {
+    const response = await apiClient.post<ExceptionRecord>(`/exceptions/${id}/mark-repaired`, data);
+    return response.data;
+  },
+
+  dispatchRescueVehicle: async (id: string, data: DispatchRescueInput): Promise<ExceptionRecord> => {
+    const response = await apiClient.post<ExceptionRecord>(`/exceptions/${id}/dispatch-rescue-vehicle`, data);
+    return response.data;
+  },
+
+  confirmTransfer: async (id: string, data: ConfirmTransferInput): Promise<ExceptionRecord> => {
+    const response = await apiClient.post<ExceptionRecord>(`/exceptions/${id}/confirm-transfer`, data);
+    return response.data;
+  },
+
+  returnToOrigin: async (id: string, data: ReturnToOriginInput): Promise<ExceptionRecord> => {
+    const response = await apiClient.post<ExceptionRecord>(`/exceptions/${id}/return-to-origin`, data);
+    return response.data;
+  },
+
+  logCallAttempt: async (id: string, data: LogCallAttemptInput): Promise<ExceptionRecord> => {
+    const response = await apiClient.post<ExceptionRecord>(`/exceptions/${id}/log-call-attempt`, data);
+    return response.data;
+  },
+
+  escalateException: async (id: string, data: EscalateInput): Promise<ExceptionRecord> => {
+    const response = await apiClient.post<ExceptionRecord>(`/exceptions/${id}/escalate`, data);
+    return response.data;
+  },
+
+  addExceptionNote: async (id: string, data: AddNoteInput): Promise<ExceptionRecord> => {
+    const response = await apiClient.post<ExceptionRecord>(`/exceptions/${id}/notes`, data);
+    return response.data;
+  },
+
+  setTripEta: async (tripId: number | string, data: { estimatedArrivalAt: string }): Promise<any> => {
+    const response = await apiClient.post(`/trips/${tripId}/set-eta`, data);
     return response.data;
   },
 };

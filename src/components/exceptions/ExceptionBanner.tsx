@@ -10,11 +10,12 @@ import {
   ReturnToOriginDialog,
   EscalateDialog,
   AddNoteDialog,
+  DispatchRescueVehicleDialog,
 } from './ActionDialogs';
 import { ReportExceptionDialog } from './ReportExceptionDialog';
 import { getStatusStyle, getStatusTheme } from '@/lib/status-theme';
 import { formatDate } from '@/lib/utils';
-import { formatRelativeFromNow, getOverdueDelta } from './helpers';
+import { formatRelativeFromNow, getOverdueDelta, displayReportedBy } from './helpers';
 import type { ExceptionRecord } from '@/types/exceptions';
 import { toast } from '@/lib/toast';
 import {
@@ -57,13 +58,15 @@ export function ExceptionBanner({ exception }: Props) {
     }
   }
 
-  const iconByType = {
+  const [openRescue, setOpenRescue] = useState(false);
+
+  const iconByType: Record<string, typeof Wrench> = {
     BREAKDOWN: Wrench,
     ACCIDENT: AlertTriangle,
     OVERDUE: Clock,
     TRANSFER: Repeat,
-  } as const;
-  const TypeIcon = iconByType[exception.type];
+  };
+  const TypeIcon = iconByType[exception.type] ?? AlertTriangle;
 
   const title = (() => {
     const location = exception.location || '—';
@@ -107,7 +110,7 @@ export function ExceptionBanner({ exception }: Props) {
           <p className="mt-1 text-xs text-muted-foreground">
             {t('exceptions.banners.reportedAt', {
               time: formatRelativeFromNow(exception.reportedAt),
-              by: exception.reportedBy,
+              by: displayReportedBy(exception.reportedBy),
             })}
             {exception.technician ? (
               <>
@@ -162,6 +165,10 @@ export function ExceptionBanner({ exception }: Props) {
               <Lightbulb className="h-4 w-4" />
               {t('exceptions.actions.dispatchTechnician')}
             </Button>
+            <Button size="sm" variant="outline" onClick={() => setOpenRescue(true)} className="gap-1.5">
+              <Repeat className="h-4 w-4" />
+              {t('exceptions.actions.dispatchRescue')}
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setOpenReturn(true)} className="gap-1.5">
               <ArrowLeftCircle className="h-4 w-4" />
               {t('exceptions.actions.returnOrigin')}
@@ -171,6 +178,10 @@ export function ExceptionBanner({ exception }: Props) {
 
         {exception.type === 'ACCIDENT' && (
           <>
+            <Button size="sm" variant="outline" onClick={() => setOpenRescue(true)} className="gap-1.5">
+              <Repeat className="h-4 w-4" />
+              {t('exceptions.actions.dispatchRescue')}
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setOpenReturn(true)} className="gap-1.5">
               <ArrowLeftCircle className="h-4 w-4" />
               {t('exceptions.actions.returnOrigin')}
@@ -235,10 +246,11 @@ export function ExceptionBanner({ exception }: Props) {
         onOpenChange={setOpenContact}
         exceptionId={exception.id}
       />
-      <UpdateETADialog open={openEta} onOpenChange={setOpenEta} exceptionId={exception.id} />
+      <UpdateETADialog open={openEta} onOpenChange={setOpenEta} exceptionId={exception.id} tripId={exception.tripId} />
       <ReturnToOriginDialog open={openReturn} onOpenChange={setOpenReturn} exceptionId={exception.id} />
       <EscalateDialog open={openEscalate} onOpenChange={setOpenEscalate} exceptionId={exception.id} />
       <AddNoteDialog open={openNote} onOpenChange={setOpenNote} exceptionId={exception.id} />
+      <DispatchRescueVehicleDialog open={openRescue} onOpenChange={setOpenRescue} exceptionId={exception.id} />
       <ReportExceptionDialog
         open={openReport}
         onOpenChange={setOpenReport}

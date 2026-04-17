@@ -93,7 +93,11 @@
     "CLOSED_RETURNED": "Clôturé — retourné",
     "ESCALATED": "Disparu / Escaladé",
     "RESCUE": "Trajet de secours",
-    "IN_PROGRESS": "En cours"
+    "IN_PROGRESS": "En cours",
+    "POLICE_STOP": "Contrôle de police",
+    "OTHER": "Autre",
+    "TRANSFER_IN_PROGRESS": "Transfert en cours",
+    "NO_SHOW_ESCALATED": "Non-présentation escaladée"
   },
   "trips": {
     "title": "Trajets",
@@ -634,13 +638,17 @@
       "BREAKDOWN": "Panne du véhicule",
       "ACCIDENT": "Accident de la route",
       "OVERDUE": "Trajet en retard",
-      "TRANSFER": "Transfert de marchandises"
+      "TRANSFER": "Transfert de marchandises",
+      "POLICE_STOP": "Contrôle de police",
+      "OTHER": "Autre incident"
     },
     "typeShort": {
       "BREAKDOWN": "Panne",
       "ACCIDENT": "Accident",
       "OVERDUE": "En retard",
-      "TRANSFER": "Transfert"
+      "TRANSFER": "Transfert",
+      "POLICE_STOP": "Police",
+      "OTHER": "Autre"
     },
     "severity": {
       "MINOR": "Mineur",
@@ -818,6 +826,26 @@
       "text": "Note",
       "submit": "Ajouter la note"
     },
+    "dispatchRescue": {
+      "description": "Sélectionnez un véhicule disponible pour le transfert de marchandises.",
+      "selectVehicle": "Véhicule de secours",
+      "selectPlaceholder": "-- Sélectionner un véhicule --",
+      "transferLocation": "Lieu de transfert",
+      "estimatedArrival": "Arrivée estimée",
+      "notes": "Notes",
+      "submit": "Envoyer le véhicule de secours"
+    },
+    "confirmTransfer": {
+      "title": "Confirmer le transfert",
+      "description": "Confirmez que les marchandises ont été transférées au véhicule de secours.",
+      "cargoCount": "Nombre de colis transférés",
+      "cargoCondition": "État des marchandises",
+      "conditionGood": "Bon",
+      "conditionMinorDamage": "Dégâts mineurs",
+      "conditionMajorDamage": "Dégâts majeurs",
+      "notes": "Notes",
+      "submit": "Confirmer le transfert"
+    },
     "detail": {
       "summary": "Résumé de l'exception",
       "location": "Lieu",
@@ -856,7 +884,9 @@
       "etaUpdated": "Arrivée prévue mise à jour",
       "returned": "Retourné à l'origine",
       "escalated": "Exception escaladée",
-      "noteAdded": "Note ajoutée"
+      "noteAdded": "Note ajoutée",
+      "rescueDispatched": "Véhicule de secours envoyé",
+      "transferConfirmed": "Transfert confirmé"
     }
   },
   "tripDetail": {

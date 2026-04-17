@@ -1,5 +1,17 @@
 import type { ExceptionRecord, ExceptionType } from '@/types/exceptions';
+import { isExceptionActive } from '@/types/exceptions';
 import { getStatusTheme } from '@/lib/status-theme';
+
+/** Safely extract a display string from reportedBy (may be string or {id, username}) */
+export function displayReportedBy(val: unknown): string {
+  if (!val) return '—';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object' && val !== null) {
+    const obj = val as Record<string, unknown>;
+    return (obj.username as string) ?? (obj.fullname as string) ?? String(obj.id ?? '—');
+  }
+  return String(val);
+}
 
 export function typeThemeKey(type: ExceptionType): string {
   return type;
@@ -33,6 +45,15 @@ export function getOverdueDelta(e: ExceptionRecord): string | null {
   if (e.type !== 'OVERDUE' || !e.expectedArrival) return null;
   const ms = Date.now() - new Date(e.expectedArrival).getTime();
   return formatDuration(ms);
+}
+
+export function selectActiveExceptionForTrip(
+  exceptions: ExceptionRecord[],
+  tripId: number | string,
+): ExceptionRecord | undefined {
+  return exceptions.find(
+    (e) => String(e.tripId) === String(tripId) && isExceptionActive(e),
+  );
 }
 
 export function getActionNeededText(e: ExceptionRecord): string {

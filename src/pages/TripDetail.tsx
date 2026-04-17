@@ -20,14 +20,15 @@ import { dashboardApi } from '@/api/dashboard';
 import { cn } from '@/lib/utils';
 import { formatDate } from '@/lib/utils';
 import { getStatusStyle, getStatusTheme } from '@/lib/status-theme';
-import { useExceptionsStore, selectActiveExceptionForTrip } from '@/stores/exceptions.store';
+import { useExceptionsByTrip } from '@/hooks/useExceptions';
+import { ACTIVE_STATUSES } from '@/types/exceptions';
 import { ExceptionBanner } from '@/components/exceptions/ExceptionBanner';
 import {
   ReportExceptionDialog,
   ReportTypePickerDialog,
 } from '@/components/exceptions/ReportExceptionDialog';
 import { AddNoteDialog } from '@/components/exceptions/ActionDialogs';
-import { formatRelativeFromNow, formatDuration, getOverdueDelta } from '@/components/exceptions/helpers';
+import { formatRelativeFromNow, formatDuration, getOverdueDelta, displayReportedBy } from '@/components/exceptions/helpers';
 import type { ExceptionRecord, ExceptionType } from '@/types/exceptions';
 import { ExceptionBadge } from '@/components/exceptions/ExceptionBadge';
 
@@ -36,19 +37,14 @@ export default function TripDetail() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const exceptions = useExceptionsStore((s) => s.exceptions);
+  const { data: tripExceptions = [] } = useExceptionsByTrip(id);
   const exception = useMemo(
-    () => (id ? selectActiveExceptionForTrip(exceptions, id) : undefined),
-    [exceptions, id],
+    () => tripExceptions.find((e) => ACTIVE_STATUSES.includes(e.status)),
+    [tripExceptions],
   );
   const resolvedOrClosedForTrip = useMemo(
-    () =>
-      id
-        ? exceptions.find(
-            (e) => String(e.tripId) === id && !!e.resolution,
-          )
-        : undefined,
-    [exceptions, id],
+    () => tripExceptions.find((e) => !!e.resolution),
+    [tripExceptions],
   );
   const currentException = exception ?? resolvedOrClosedForTrip;
 
@@ -378,7 +374,7 @@ function Timeline({
       title: t('exceptions.timeline.divider', {
         type: getStatusTheme(exception.type).label,
         time: formatDate(exception.reportedAt),
-        by: exception.reportedBy,
+        by: displayReportedBy(exception.reportedBy),
       }),
       subtitle: exception.location,
       color: theme.hex,
@@ -394,7 +390,7 @@ function Timeline({
         color: getStatusTheme('AWAITING_REPAIR').hex,
       });
     }
-    for (const a of exception.contactAttempts) {
+    for (const a of (Array.isArray(exception.contactAttempts) ? exception.contactAttempts : [])) {
       const key =
         a.outcome === 'ANSWERED'
           ? 'exceptions.timeline.callAnswered'
@@ -406,17 +402,17 @@ function Timeline({
         kind: 'CONTACT',
         at: a.at,
         title: t(key),
-        subtitle: `${a.by}${a.notes ? ' · ' + a.notes : ''}`,
+        subtitle: `${displayReportedBy(a.by)}${a.notes ? ' · ' + a.notes : ''}`,
         color: '#F97316',
       });
     }
-    for (const n of exception.notes) {
+    for (const n of (Array.isArray(exception.notes) ? exception.notes : [])) {
       entries.push({
-        id: `note-${n.at}-${n.by}`,
+        id: `note-${n.at}-${displayReportedBy(n.by)}`,
         kind: 'NOTE',
         at: n.at,
         title: t('exceptions.timeline.note'),
-        subtitle: `${n.text} — ${n.by}`,
+        subtitle: `${n.text} — ${displayReportedBy(n.by)}`,
         color: '#64748B',
       });
     }
@@ -426,7 +422,7 @@ function Timeline({
         kind: 'EXCEPTION',
         at: exception.resolution.at,
         title: exception.resolution.kind,
-        subtitle: `${exception.resolution.by}${exception.resolution.notes ? ' · ' + exception.resolution.notes : ''}`,
+        subtitle: `${displayReportedBy(exception.resolution.by)}${exception.resolution.notes ? ' · ' + exception.resolution.notes : ''}`,
         color: getStatusTheme('RESOLVED_RESUMED').hex,
       });
     }
@@ -513,7 +509,7 @@ function ExceptionSummaryCard({ exception }: { exception: ExceptionRecord }) {
           label={t('exceptions.detail.reportedAt')}
           value={`${formatDate(exception.reportedAt)} (${formatRelativeFromNow(exception.reportedAt)})`}
         />
-        <Row label={t('exceptions.detail.reportedBy')} value={exception.reportedBy} />
+        <Row label={t('exceptions.detail.reportedBy')} value={displayReportedBy(exception.reportedBy)} />
         <Row label={t('exceptions.detail.issue')} value={exception.description} />
 
         {exception.type === 'BREAKDOWN' && exception.technician && (
@@ -558,7 +554,7 @@ function ExceptionSummaryCard({ exception }: { exception: ExceptionRecord }) {
               <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 {t('exceptions.detail.contactAttempts')}
               </dt>
-              {exception.contactAttempts.length === 0 ? (
+              {(!Array.isArray(exception.contactAttempts) || exception.contactAttempts.length === 0) ? (
                 <p className="mt-1 text-sm text-muted-foreground">
                   {t('exceptions.detail.noContactAttempts')}
                 </p>
@@ -568,7 +564,7 @@ function ExceptionSummaryCard({ exception }: { exception: ExceptionRecord }) {
                     <li key={i} className="flex items-center gap-1.5">
                       <Phone className="h-3 w-3 text-muted-foreground" />
                       <span>
-                        {formatDate(a.at)} · {a.outcome} · {a.by}
+                        {formatDate(a.at)} · {a.outcome} · {displayReportedBy(a.by)}
                       </span>
                     </li>
                   ))}

@@ -37,9 +37,10 @@ import { formatNumber } from '@/lib/utils';
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { getStatusTheme, getStatusStyle } from '@/lib/status-theme';
-import { useExceptionsStore, selectActiveExceptionForTrip } from '@/stores/exceptions.store';
-import { ACTIVE_STATUSES, type ExceptionType } from '@/types/exceptions';
+import { useActiveExceptions } from '@/hooks/useExceptions';
+import type { ExceptionType } from '@/types/exceptions';
 import { ExceptionBadge } from '@/components/exceptions/ExceptionBadge';
+import { selectActiveExceptionForTrip } from '@/components/exceptions/helpers';
 
 export default function Trips() {
   const { t } = useTranslation();
@@ -48,19 +49,17 @@ export default function Trips() {
   const [page, setPage] = useState(() => parseInt(searchParams.get('page') || '1', 10));
   const limit = 20;
   const [exceptionChip, setExceptionChip] = useState<ExceptionType | 'EXCEPTIONS' | null>(null);
-  const allExceptions = useExceptionsStore((s) => s.exceptions);
-  const activeExceptionsCount = allExceptions.filter((e) =>
-    ACTIVE_STATUSES.includes(e.status),
-  ).length;
+  const { data: allExceptions = [] } = useActiveExceptions();
+  const activeExceptionsCount = allExceptions.length;
   const countByType = useMemo(() => {
-    const counts: Record<ExceptionType, number> = {
+    const counts: Record<string, number> = {
       BREAKDOWN: 0,
       ACCIDENT: 0,
       OVERDUE: 0,
       TRANSFER: 0,
     };
     for (const e of allExceptions) {
-      if (ACTIVE_STATUSES.includes(e.status)) counts[e.type] += 1;
+      if (counts[e.type] !== undefined) counts[e.type] += 1;
     }
     return counts;
   }, [allExceptions]);

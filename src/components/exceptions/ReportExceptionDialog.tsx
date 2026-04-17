@@ -12,11 +12,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useExceptionsStore } from '@/stores/exceptions.store';
 import { useAuthStore } from '@/stores/auth.store';
-import { toast } from '@/lib/toast';
+import { useReportException } from '@/hooks/useExceptions';
 import { cn } from '@/lib/utils';
-import type { ExceptionSeverity, ExceptionType, ReportExceptionInput } from '@/types/exceptions';
+import { toast } from '@/lib/toast';
+import { Loader2 } from 'lucide-react';
+import type { ExceptionSeverity, ExceptionType } from '@/types/exceptions';
 
 interface Props {
   open: boolean;
@@ -53,15 +54,12 @@ export function ReportExceptionDialog({
   onOpenChange,
   type,
   tripId,
-  vehiclePlate,
-  originName,
-  destinationName,
   driverPhone,
   onReported,
 }: Props) {
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const report = useExceptionsStore((s) => s.report);
+  const reportMutation = useReportException();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [form, setForm] = useState<FormState>({
@@ -108,33 +106,39 @@ export function ReportExceptionDialog({
       toast.error(t('exceptions.form.required'));
       return;
     }
-    const input: ReportExceptionInput = {
-      tripId,
-      vehiclePlate,
-      originName,
-      destinationName,
+
+    const payload: Record<string, unknown> = {
       type,
-      reportedBy: form.reportedBy || 'Dispatcher',
       location: form.location.trim(),
       description: form.description.trim(),
-      driverPhone: form.driverPhone || undefined,
     };
+
     if (type === 'ACCIDENT') {
-      input.severity = form.severity;
-      input.injuries = form.injuries === 'yes';
-      input.cargoDamaged = form.cargoDamaged === 'yes';
-      input.cargoDamageNotes =
-        form.cargoDamaged === 'yes' ? form.cargoDamageNotes || undefined : undefined;
-      input.vehicleDriveable = form.vehicleDriveable === 'yes';
-      input.policeRef = form.policeRef || undefined;
+      payload.severity = form.severity;
+      payload.hasInjuries = form.injuries === 'yes';
+      payload.isCargoDamaged = form.cargoDamaged === 'yes';
+      if (form.cargoDamaged === 'yes' && form.cargoDamageNotes) {
+        payload.cargoDamageDescription = form.cargoDamageNotes;
+      }
+      payload.isVehicleDriveable = form.vehicleDriveable === 'yes';
+      if (form.policeRef) {
+        payload.policeReportReference = form.policeRef;
+      }
     }
-    if (type === 'OVERDUE' && form.expectedArrival) {
-      input.expectedArrival = new Date(form.expectedArrival).toISOString();
+
+    if (type === 'POLICE_STOP' && form.policeRef) {
+      payload.policeReportReference = form.policeRef;
     }
-    const created = report(input);
-    toast.success(t('exceptions.toasts.reported'), t('exceptions.toasts.reportedDesc'));
-    onReported?.(created.id);
-    handleClose(false);
+
+    reportMutation.mutate(
+      { tripId, data: payload as any },
+      {
+        onSuccess: (created) => {
+          onReported?.(created.id);
+          handleClose(false);
+        },
+      },
+    );
   }
 
   const typeLabel = t(`exceptions.types.${type}`);
@@ -218,12 +222,23 @@ export function ReportExceptionDialog({
 
               {type === 'OVERDUE' && (
                 <div className="space-y-2">
-                  <Label htmlFor="ex-eta">{t('exceptions.form.reportedBy')}</Label>
+                  <Label htmlFor="ex-eta">{t('exceptions.updateEta.eta')}</Label>
                   <Input
                     id="ex-eta"
                     type="datetime-local"
                     value={form.expectedArrival}
                     onChange={(e) => setForm({ ...form, expectedArrival: e.target.value })}
+                  />
+                </div>
+              )}
+
+              {type === 'POLICE_STOP' && (
+                <div className="space-y-2">
+                  <Label htmlFor="ex-police">{t('exceptions.form.policeRef')}</Label>
+                  <Input
+                    id="ex-police"
+                    value={form.policeRef}
+                    onChange={(e) => setForm({ ...form, policeRef: e.target.value })}
                   />
                 </div>
               )}
@@ -360,7 +375,10 @@ export function ReportExceptionDialog({
                 {t('exceptions.form.next')}
               </Button>
             ) : (
-              <Button type="submit">{t('exceptions.form.submit')}</Button>
+              <Button type="submit" disabled={reportMutation.isPending}>
+                {reportMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {t('exceptions.form.submit')}
+              </Button>
             )}
           </DialogFooter>
         </form>
@@ -388,7 +406,13 @@ export function ReportTypePickerDialog({
           <DialogDescription>{t('exceptions.form.reportDescription')}</DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
-          {(['BREAKDOWN', 'ACCIDENT', 'OVERDUE'] as const).map((type) => (
+          {([
+            { type: 'BREAKDOWN' as const, emoji: '🔧' },
+            { type: 'ACCIDENT' as const, emoji: '🚨' },
+            { type: 'OVERDUE' as const, emoji: '⏱' },
+            { type: 'POLICE_STOP' as const, emoji: '🛡' },
+            { type: 'OTHER' as const, emoji: '📋' },
+          ]).map(({ type, emoji }) => (
             <button
               key={type}
               type="button"
@@ -398,11 +422,7 @@ export function ReportTypePickerDialog({
               }}
               className="flex w-full items-center gap-3 rounded-md border border-input bg-background p-3 text-left transition hover:border-primary hover:bg-primary/5"
             >
-              <span className="text-lg">
-                {type === 'BREAKDOWN' && '🔧'}
-                {type === 'ACCIDENT' && '🚨'}
-                {type === 'OVERDUE' && '⏱'}
-              </span>
+              <span className="text-lg">{emoji}</span>
               <span className="text-sm font-medium text-foreground">
                 {t(`exceptions.types.${type}`)}
               </span>

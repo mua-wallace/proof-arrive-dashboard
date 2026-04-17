@@ -40,8 +40,8 @@ import {
   Calendar,
   AlertTriangle,
 } from 'lucide-react';
-import { useExceptionsStore } from '@/stores/exceptions.store';
-import { ACTIVE_STATUSES, type ExceptionType, type ExceptionRecord } from '@/types/exceptions';
+import { useActiveExceptions, useExceptionsSummary } from '@/hooks/useExceptions';
+import { type ExceptionType, type ExceptionRecord } from '@/types/exceptions';
 import { ExceptionBadge } from '@/components/exceptions/ExceptionBadge';
 import { getActionNeededText, formatRelativeFromNow } from '@/components/exceptions/helpers';
 import {
@@ -210,23 +210,21 @@ export default function Dashboard() {
     staleTime: 30 * 1000,
   });
 
-  const allExceptions = useExceptionsStore((s) => s.exceptions);
-  const activeExceptions = useMemo(
-    () => allExceptions.filter((e) => ACTIVE_STATUSES.includes(e.status)),
-    [allExceptions],
-  );
+  const { data: activeExceptions = [] } = useActiveExceptions();
+  const { data: exceptionSummary } = useExceptionsSummary();
   const exceptionCounts = useMemo(() => {
-    const counts: Record<ExceptionType, number> = {
-      BREAKDOWN: 0,
-      ACCIDENT: 0,
+    const counts: Record<string, number> = {
+      BREAKDOWN: exceptionSummary?.breakdowns ?? 0,
+      ACCIDENT: exceptionSummary?.accidents ?? 0,
       OVERDUE: 0,
-      TRANSFER: 0,
+      TRANSFER: exceptionSummary?.transfers ?? 0,
     };
-    for (const e of allExceptions) {
-      if (ACTIVE_STATUSES.includes(e.status)) counts[e.type] += 1;
+    // Fill in any counts not explicitly in the summary from active exceptions
+    for (const e of activeExceptions) {
+      if (e.type === 'OVERDUE') counts.OVERDUE += 1;
     }
     return counts;
-  }, [allExceptions]);
+  }, [activeExceptions, exceptionSummary]);
   const [exceptionFilter, setExceptionFilter] = useState<ExceptionType | 'ALL'>('ALL');
   const filteredExceptions = useMemo(
     () =>

@@ -23,8 +23,7 @@ import {
   X as CloseIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useExceptionsStore } from '@/stores/exceptions.store';
-import { isExceptionActive } from '@/types/exceptions';
+import { useActiveExceptions } from '@/hooks/useExceptions';
 
 type NavItem = { key: string; labelKey: string; href: string; icon: typeof LayoutDashboard };
 
@@ -61,9 +60,8 @@ export default function Layout() {
   });
   const pendingCount = Array.isArray(pendingData?.data) ? pendingData.data.length : 0;
 
-  const activeIncidentsCount = useExceptionsStore(
-    (s) => s.exceptions.filter(isExceptionActive).length,
-  );
+  const { data: activeExceptionsData } = useActiveExceptions();
+  const activeIncidentsCount = activeExceptionsData?.length ?? 0;
 
   const { data: currentUser } = useQuery({
     queryKey: ['users', 'me'],

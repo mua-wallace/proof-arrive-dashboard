@@ -24,6 +24,8 @@ import {
   Undo2,
   Siren,
   LifeBuoy,
+  Shield,
+  HelpCircle,
 } from 'lucide-react';
 import i18n from '@/lib/i18n';
 
@@ -52,6 +54,10 @@ const TRIP_STATUS_THEME_RAW: Record<string, StatusThemeEntry> = {
   ESCALATED: { hex: '#EF4444', labelKey: 'vehicleStatus.ESCALATED', icon: Siren },
   RESCUE: { hex: '#8B5CF6', labelKey: 'vehicleStatus.RESCUE', icon: LifeBuoy },
   IN_PROGRESS: { hex: '#F97316', labelKey: 'vehicleStatus.IN_PROGRESS', icon: Clock },
+  POLICE_STOP: { hex: '#6B7280', labelKey: 'vehicleStatus.POLICE_STOP', icon: Shield },
+  OTHER: { hex: '#9CA3AF', labelKey: 'vehicleStatus.OTHER', icon: HelpCircle },
+  TRANSFER_IN_PROGRESS: { hex: '#3B82F6', labelKey: 'vehicleStatus.TRANSFER_IN_PROGRESS', icon: Repeat },
+  NO_SHOW_ESCALATED: { hex: '#EF4444', labelKey: 'vehicleStatus.NO_SHOW_ESCALATED', icon: Siren },
 };
 
 /**
