@@ -3,6 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
+  format,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+} from 'date-fns';
+import {
   dashboardApi,
   type Trip,
   type TripsQuery,
@@ -42,6 +49,28 @@ import type { ExceptionType } from '@/types/exceptions';
 import { ExceptionBadge } from '@/components/exceptions/ExceptionBadge';
 import { selectActiveExceptionForTrip } from '@/components/exceptions/helpers';
 
+type DatePreset = 'today' | 'day' | 'week' | 'month' | 'custom';
+
+const toYmd = (d: Date) => format(d, 'yyyy-MM-dd');
+
+function computeRangeForPreset(preset: DatePreset): { startDate: string; endDate: string } {
+  const now = new Date();
+  switch (preset) {
+    case 'today':
+    case 'day':
+      return { startDate: toYmd(now), endDate: toYmd(now) };
+    case 'week':
+      return {
+        startDate: toYmd(startOfWeek(now, { weekStartsOn: 1 })),
+        endDate: toYmd(endOfWeek(now, { weekStartsOn: 1 })),
+      };
+    case 'month':
+      return { startDate: toYmd(startOfMonth(now)), endDate: toYmd(endOfMonth(now)) };
+    default:
+      return { startDate: '', endDate: '' };
+  }
+}
+
 export default function Trips() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -67,7 +96,16 @@ export default function Trips() {
   const [purpose, setPurpose] = useState<'DELIVERY' | 'PICKUP' | ''>(() => (searchParams.get('purpose') as 'DELIVERY' | 'PICKUP') || '');
   const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [debouncedSearch, setDebouncedSearch] = useState(search);
-  const [createdAt, setCreatedAt] = useState(() => searchParams.get('createdAt') || '');
+  const [preset, setPreset] = useState<DatePreset>(() => {
+    const p = searchParams.get('preset') as DatePreset | null;
+    if (p === 'today' || p === 'day' || p === 'week' || p === 'month' || p === 'custom') return p;
+    const sd = searchParams.get('startDate');
+    const ed = searchParams.get('endDate');
+    if (sd || ed) return 'custom';
+    return 'today';
+  });
+  const [startDate, setStartDate] = useState(() => searchParams.get('startDate') || '');
+  const [endDate, setEndDate] = useState(() => searchParams.get('endDate') || '');
   const [showUncompleted, setShowUncompleted] = useState(
     () => searchParams.get('view') === 'uncompleted'
   );
@@ -81,16 +119,28 @@ export default function Trips() {
     return () => clearTimeout(t);
   }, [search]);
 
+  // Compute what gets sent to the API. "today" preset omits both params so the
+  // API returns today's trips unioned with all ONGOING trips (the new default).
+  const apiRange = useMemo(() => {
+    if (preset === 'today') return { startDate: '', endDate: '' };
+    if (preset === 'custom' || preset === 'day') return { startDate, endDate };
+    return computeRangeForPreset(preset);
+  }, [preset, startDate, endDate]);
+
   useEffect(() => {
     const params = new URLSearchParams();
     if (page > 1) params.set('page', String(page));
     if (status) params.set('status', status);
     if (purpose) params.set('purpose', purpose);
     if (debouncedSearch) params.set('search', debouncedSearch);
-    if (createdAt) params.set('createdAt', createdAt);
+    if (preset !== 'today') params.set('preset', preset);
+    if (preset === 'custom' || preset === 'day') {
+      if (startDate) params.set('startDate', startDate);
+      if (endDate) params.set('endDate', endDate);
+    }
     if (showUncompleted) params.set('view', 'uncompleted');
     setSearchParams(params, { replace: true });
-  }, [page, status, purpose, debouncedSearch, createdAt, showUncompleted, setSearchParams]);
+  }, [page, status, purpose, debouncedSearch, preset, startDate, endDate, showUncompleted, setSearchParams]);
 
   const query: TripsQuery = {
     page,
@@ -101,7 +151,8 @@ export default function Trips() {
   if (status) query.status = status;
   if (purpose) query.purpose = purpose;
   if (debouncedSearch) query.search = debouncedSearch;
-  if (createdAt) query.createdAt = createdAt;
+  if (apiRange.startDate) query.startDate = apiRange.startDate;
+  if (apiRange.endDate) query.endDate = apiRange.endDate;
 
   const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ['trips', query],
@@ -114,7 +165,8 @@ export default function Trips() {
         ...(status && { status }),
         ...(purpose && { purpose }),
         ...(debouncedSearch && { search: debouncedSearch }),
-        ...(createdAt && { createdAt }),
+        ...(apiRange.startDate && { startDate: apiRange.startDate }),
+        ...(apiRange.endDate && { endDate: apiRange.endDate }),
       }),
     placeholderData: keepPreviousData,
     retry: 1,
@@ -246,7 +298,7 @@ export default function Trips() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-3 pt-0">
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
             <div className="space-y-1">
               <Label htmlFor="status" className="text-[10px] uppercase tracking-wider text-muted-foreground">
                 {t('trips.filters.status')}
@@ -286,21 +338,74 @@ export default function Trips() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="createdAt" className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                {t('trips.filters.date')}
+              <Label htmlFor="preset" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {t('trips.filters.datePreset')}
+              </Label>
+              <Select
+                id="preset"
+                className="h-8 text-xs"
+                value={preset}
+                onChange={(e) => {
+                  const next = e.target.value as DatePreset;
+                  setPreset(next);
+                  if (next === 'today') {
+                    setStartDate('');
+                    setEndDate('');
+                  } else if (next === 'day') {
+                    const today = toYmd(new Date());
+                    setStartDate(today);
+                    setEndDate(today);
+                  } else if (next === 'week' || next === 'month') {
+                    const r = computeRangeForPreset(next);
+                    setStartDate(r.startDate);
+                    setEndDate(r.endDate);
+                  }
+                  setPage(1);
+                }}
+              >
+                <option value="today">{t('trips.datePreset.today')}</option>
+                <option value="day">{t('trips.datePreset.day')}</option>
+                <option value="week">{t('trips.datePreset.week')}</option>
+                <option value="month">{t('trips.datePreset.month')}</option>
+                <option value="custom">{t('trips.datePreset.custom')}</option>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="startDate" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {t('trips.filters.startDate')}
               </Label>
               <Input
-                id="createdAt"
+                id="startDate"
                 type="date"
                 className="h-8 text-xs"
-                value={createdAt}
+                value={apiRange.startDate}
+                disabled={preset === 'today' || preset === 'week' || preset === 'month'}
                 onChange={(e) => {
-                  setCreatedAt(e.target.value);
+                  setStartDate(e.target.value);
+                  if (preset === 'day') setEndDate(e.target.value);
+                  else setPreset('custom');
                   setPage(1);
                 }}
               />
             </div>
-            <div className="space-y-1 sm:col-span-2">
+            <div className="space-y-1">
+              <Label htmlFor="endDate" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {t('trips.filters.endDate')}
+              </Label>
+              <Input
+                id="endDate"
+                type="date"
+                className="h-8 text-xs"
+                value={apiRange.endDate}
+                disabled={preset === 'today' || preset === 'day' || preset === 'week' || preset === 'month'}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setPreset('custom');
+                  setPage(1);
+                }}
+              />
+            </div>
+            <div className="space-y-1 sm:col-span-2 lg:col-span-1">
               <Label htmlFor="search" className="text-[10px] uppercase tracking-wider text-muted-foreground">
                 {t('trips.filters.search')}
               </Label>

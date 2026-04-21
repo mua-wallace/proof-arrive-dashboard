@@ -33,7 +33,8 @@ export interface TripsQuery extends PaginateQuery {
   destinationCenterId?: number;
   centerId?: number;
   purpose?: 'DELIVERY' | 'PICKUP';
-  createdAt?: string; // YYYY-MM-DD
+  startDate?: string; // YYYY-MM-DD (inclusive)
+  endDate?: string; // YYYY-MM-DD (inclusive)
 }
 
 export interface ReportsQuery {
@@ -326,6 +327,31 @@ export interface VehicleGroup {
   groupName: string;
   total: number;
   vehicles: Vehicle[];
+}
+
+export interface Geozone {
+  id: number;
+  name?: string;
+  code?: string;
+  [key: string]: unknown;
+}
+
+export interface CreateCenterInput {
+  name: string;
+  geozoneId: number;
+  geozone?: string;
+  fullname?: string;
+  manager?: string;
+  groupname?: string;
+  groupid?: number;
+  time1?: string;
+  time2?: string;
+  saturday?: string;
+  sunday?: string;
+  breakstart?: string;
+  breakstop?: string;
+  timeoutin?: number;
+  timeoutin_muros?: number;
 }
 
 export interface BulkQrCodeRequest {
@@ -621,7 +647,8 @@ export const dashboardApi = {
     search?: string;
     status?: 'ONGOING' | 'COMPLETED';
     purpose?: 'DELIVERY' | 'PICKUP';
-    createdAt?: string; // YYYY-MM-DD
+    startDate?: string; // YYYY-MM-DD (inclusive)
+    endDate?: string; // YYYY-MM-DD (inclusive)
   }): Promise<PaginateResult<Trip>> => {
     const { sortOrder, include, ...rest } = params ?? {};
     const requestParams: Record<string, unknown> = {
@@ -742,6 +769,19 @@ export const dashboardApi = {
   getCenterById: async (id: number): Promise<any> => {
     const response = await apiClient.get(`/centers/${id}`);
     return response.data;
+  },
+
+  createCenter: async (data: CreateCenterInput): Promise<any> => {
+    const response = await apiClient.post('/centers', data);
+    return response.data;
+  },
+
+  getGeozones: async (): Promise<Geozone[]> => {
+    const response = await apiClient.get<any>('/geozones');
+    const raw = response.data;
+    if (Array.isArray(raw)) return raw;
+    if (raw && Array.isArray(raw.data)) return raw.data;
+    return [];
   },
 
   // --- Exceptions ---

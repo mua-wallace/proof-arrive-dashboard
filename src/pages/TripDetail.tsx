@@ -20,16 +20,13 @@ import { dashboardApi } from '@/api/dashboard';
 import { cn } from '@/lib/utils';
 import { formatDate } from '@/lib/utils';
 import { getStatusStyle, getStatusTheme } from '@/lib/status-theme';
-import { useExceptionsByTrip } from '@/hooks/useExceptions';
+import { useExceptionsByTrip, useReportException } from '@/hooks/useExceptions';
 import { ACTIVE_STATUSES } from '@/types/exceptions';
 import { ExceptionBanner } from '@/components/exceptions/ExceptionBanner';
-import {
-  ReportExceptionDialog,
-  ReportTypePickerDialog,
-} from '@/components/exceptions/ReportExceptionDialog';
+import { ReportTypePickerDialog } from '@/components/exceptions/ReportExceptionDialog';
 import { AddNoteDialog } from '@/components/exceptions/ActionDialogs';
 import { formatRelativeFromNow, formatDuration, getOverdueDelta, displayReportedBy } from '@/components/exceptions/helpers';
-import type { ExceptionRecord, ExceptionType } from '@/types/exceptions';
+import type { ExceptionRecord } from '@/types/exceptions';
 import { ExceptionBadge } from '@/components/exceptions/ExceptionBadge';
 
 export default function TripDetail() {
@@ -59,10 +56,9 @@ export default function TripDetail() {
     retry: 1,
   });
 
-  const [reportOpen, setReportOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [reportType, setReportType] = useState<ExceptionType>('BREAKDOWN');
   const [noteOpen, setNoteOpen] = useState(false);
+  const reportMutation = useReportException();
 
   const tripView = useMemo(() => {
     if (apiTrip) {
@@ -232,19 +228,8 @@ export default function TripDetail() {
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         onPick={(type) => {
-          setReportType(type);
-          setReportOpen(true);
+          reportMutation.mutate({ tripId: tripView.id, data: { type } });
         }}
-      />
-      <ReportExceptionDialog
-        open={reportOpen}
-        onOpenChange={setReportOpen}
-        type={reportType}
-        tripId={tripView.id}
-        vehiclePlate={tripView.plate}
-        originName={tripView.originName}
-        destinationName={tripView.destinationName}
-        driverPhone={tripView.driverPhone}
       />
       {currentException && (
         <AddNoteDialog

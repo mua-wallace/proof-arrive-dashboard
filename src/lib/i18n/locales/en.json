@@ -116,12 +116,21 @@
     "loadErrorUncompleted": "Failed to load uncompleted trips",
     "filters": {
       "title": "Filters",
-      "description": "Narrow down by status, purpose, or vehicle/center search",
+      "description": "Narrow down by status, purpose, date range, or vehicle/center search",
       "status": "Status",
       "purpose": "Purpose",
-      "date": "Date (created)",
+      "datePreset": "Date",
+      "startDate": "From",
+      "endDate": "To",
       "search": "Search",
       "searchPlaceholder": "Vehicle plate or center name..."
+    },
+    "datePreset": {
+      "today": "Today",
+      "day": "Specific day",
+      "week": "This week",
+      "month": "This month",
+      "custom": "Custom range"
     },
     "status": {
       "ongoing": "Ongoing",
@@ -353,6 +362,41 @@
       "serviceStartedDesc": "Next vehicle in queue is now being served.",
       "error": "Error",
       "startFailed": "Failed to start next service"
+    },
+    "create": {
+      "button": "New center",
+      "title": "Create center",
+      "description": "Add a new center to the system. Only name and geozone are required.",
+      "submit": "Create center",
+      "sections": {
+        "hours": "Working hours"
+      },
+      "fields": {
+        "name": "Name",
+        "geozone": "Geozone",
+        "fullname": "Full name",
+        "manager": "Manager",
+        "group": "Group",
+        "time1": "Opens at",
+        "time2": "Closes at",
+        "saturday": "Saturday opens",
+        "sunday": "Sunday opens",
+        "breakStart": "Break start",
+        "breakStop": "Break end",
+        "timeoutIn": "Timeout (minutes)",
+        "timeoutMuros": "Timeout muros (minutes)"
+      },
+      "placeholders": {
+        "name": "e.g. Center 003",
+        "selectGeozone": "-- Select a geozone --"
+      },
+      "toast": {
+        "created": "Center created",
+        "createdDesc": "The center has been added successfully.",
+        "error": "Error",
+        "createFailed": "Failed to create center",
+        "required": "Name and geozone are required."
+      }
     }
   },
   "availableVehicles": {

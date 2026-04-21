@@ -29,9 +29,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Building2, Search, ChevronLeft, ChevronRight, ArrowUpDown, Loader2, ListOrdered, Play } from 'lucide-react';
+import { Building2, Search, ChevronLeft, ChevronRight, ArrowUpDown, Loader2, ListOrdered, Play, Plus } from 'lucide-react';
 import { formatNumber, formatDate } from '@/lib/utils';
 import { toast } from '@/lib/toast';
+import { CreateCenterDialog } from '@/components/centers/CreateCenterDialog';
 
 export default function Centers() {
   const { t } = useTranslation();
@@ -43,6 +44,7 @@ export default function Centers() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [queueModalCenterId, setQueueModalCenterId] = useState<number | null>(null);
   const [queueType, setQueueType] = useState<'LOADING' | 'UNLOADING'>('LOADING');
+  const [createOpen, setCreateOpen] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -132,6 +134,14 @@ export default function Centers() {
           <h1 className="text-base font-bold tracking-tight">{t('centers.title')}</h1>
           <p className="text-[11px] text-muted-foreground">{t('centers.subtitle')}</p>
         </div>
+        <Button
+          size="sm"
+          onClick={() => setCreateOpen(true)}
+          className="ml-auto h-8 gap-1 text-xs"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          {t('centers.create.button')}
+        </Button>
       </div>
 
       <Card className="rounded-xl">
@@ -359,6 +369,8 @@ export default function Centers() {
           )}
         </CardContent>
       </Card>
+
+      <CreateCenterDialog open={createOpen} onOpenChange={setCreateOpen} />
 
       {/* Center queue modal */}
       <Dialog open={queueModalCenterId != null} onOpenChange={(open) => !open && setQueueModalCenterId(null)}>

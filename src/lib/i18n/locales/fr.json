@@ -116,12 +116,21 @@
     "loadErrorUncompleted": "Échec du chargement des trajets inachevés",
     "filters": {
       "title": "Filtres",
-      "description": "Affinez par statut, objectif ou recherche véhicule/centre",
+      "description": "Affinez par statut, objectif, période ou recherche véhicule/centre",
       "status": "Statut",
       "purpose": "Objectif",
-      "date": "Date (créé)",
+      "datePreset": "Date",
+      "startDate": "Du",
+      "endDate": "Au",
       "search": "Recherche",
       "searchPlaceholder": "Plaque de véhicule ou nom de centre…"
+    },
+    "datePreset": {
+      "today": "Aujourd'hui",
+      "day": "Jour précis",
+      "week": "Cette semaine",
+      "month": "Ce mois-ci",
+      "custom": "Plage personnalisée"
     },
     "status": {
       "ongoing": "En cours",
@@ -353,6 +362,41 @@
       "serviceStartedDesc": "Le prochain véhicule de la file est maintenant servi.",
       "error": "Erreur",
       "startFailed": "Échec du lancement du prochain service"
+    },
+    "create": {
+      "button": "Nouveau centre",
+      "title": "Créer un centre",
+      "description": "Ajouter un nouveau centre. Seuls le nom et la géozone sont obligatoires.",
+      "submit": "Créer le centre",
+      "sections": {
+        "hours": "Horaires d'ouverture"
+      },
+      "fields": {
+        "name": "Nom",
+        "geozone": "Géozone",
+        "fullname": "Nom complet",
+        "manager": "Responsable",
+        "group": "Groupe",
+        "time1": "Ouverture",
+        "time2": "Fermeture",
+        "saturday": "Samedi — ouverture",
+        "sunday": "Dimanche — ouverture",
+        "breakStart": "Début de pause",
+        "breakStop": "Fin de pause",
+        "timeoutIn": "Délai (minutes)",
+        "timeoutMuros": "Délai muros (minutes)"
+      },
+      "placeholders": {
+        "name": "ex. Centre 003",
+        "selectGeozone": "-- Sélectionner une géozone --"
+      },
+      "toast": {
+        "created": "Centre créé",
+        "createdDesc": "Le centre a été ajouté avec succès.",
+        "error": "Erreur",
+        "createFailed": "Échec de la création du centre",
+        "required": "Le nom et la géozone sont obligatoires."
+      }
     }
   },
   "availableVehicles": {

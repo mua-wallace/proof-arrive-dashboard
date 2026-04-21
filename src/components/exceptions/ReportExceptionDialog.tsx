@@ -407,11 +407,8 @@ export function ReportTypePickerDialog({
         </DialogHeader>
         <div className="space-y-2">
           {([
-            { type: 'BREAKDOWN' as const, emoji: '🔧' },
             { type: 'ACCIDENT' as const, emoji: '🚨' },
-            { type: 'OVERDUE' as const, emoji: '⏱' },
             { type: 'POLICE_STOP' as const, emoji: '🛡' },
-            { type: 'OTHER' as const, emoji: '📋' },
           ]).map(({ type, emoji }) => (
             <button
               key={type}

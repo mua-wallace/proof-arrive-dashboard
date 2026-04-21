@@ -82,8 +82,8 @@ export interface ExceptionRecord {
 
 export interface ReportExceptionInput {
   type: ExceptionType;
-  location: string;
-  description: string;
+  location?: string;
+  description?: string;
   severity?: ExceptionSeverity;
   hasInjuries?: boolean;
   isCargoDamaged?: boolean;
