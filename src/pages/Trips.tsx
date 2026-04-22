@@ -237,7 +237,7 @@ export default function Trips() {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex h-[calc(100vh-7rem)] flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card/60 px-4 py-2.5">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
           <ArrowRightLeft className="h-4 w-4 text-primary" />
@@ -424,7 +424,7 @@ export default function Trips() {
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden rounded-xl">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl">
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-3 pb-2">
           <div className="min-w-0">
             <CardTitle className="text-sm font-semibold">
@@ -455,7 +455,7 @@ export default function Trips() {
             </Button>
           )}
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="flex min-h-0 flex-1 flex-col p-0">
           {apiErrorMessage ? (
             <div className="flex flex-col items-center justify-center py-6 text-center">
               <p className="mb-1 text-xs font-medium text-destructive">
@@ -482,7 +482,7 @@ export default function Trips() {
             </div>
           ) : (
             <>
-              <div className="border-t">
+              <div className="min-h-0 flex-1 overflow-auto border-t">
                 <Table>
                   <TableHeader>
                     <TableRow>

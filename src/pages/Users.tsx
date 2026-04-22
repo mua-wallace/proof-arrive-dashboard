@@ -76,7 +76,7 @@ export default function Users() {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex h-[calc(100vh-7rem)] flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card/60 px-4 py-2.5">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
           <UsersIcon className="h-4 w-4 text-primary" />
@@ -162,7 +162,7 @@ export default function Users() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-xl">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl">
         <CardHeader className="p-3 pb-2">
           <CardTitle className="text-sm font-semibold">{t('users.listTitle')}</CardTitle>
           <CardDescription className="text-[11px]">
@@ -175,7 +175,7 @@ export default function Users() {
               : t('users.emptyTitle')}
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="flex min-h-0 flex-1 flex-col p-0">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -203,7 +203,7 @@ export default function Users() {
             </div>
           ) : (
             <>
-              <div className="border-t">
+              <div className="min-h-0 flex-1 overflow-auto border-t">
                 <Table>
                   <TableHeader>
                     <TableRow>

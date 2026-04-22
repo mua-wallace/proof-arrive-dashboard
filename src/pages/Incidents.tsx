@@ -77,7 +77,7 @@ export default function Incidents() {
   ];
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex h-[calc(100vh-7rem)] flex-col gap-3">
       <div className="flex items-center gap-3 rounded-xl border bg-card/60 px-4 py-2.5">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-destructive/15">
           <AlertTriangle className="h-4 w-4 text-destructive" />
@@ -115,7 +115,7 @@ export default function Incidents() {
         />
       </section>
 
-      <Card className="overflow-hidden rounded-xl">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl">
         <CardHeader className="flex flex-col gap-2 space-y-0 p-3 pb-2">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="min-w-0">
@@ -155,7 +155,7 @@ export default function Incidents() {
             })}
           </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="flex min-h-0 flex-1 flex-col p-0">
           {isLoading ? (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -171,7 +171,7 @@ export default function Incidents() {
               </p>
             </div>
           ) : (
-            <div className="rounded-md border overflow-hidden">
+            <div className="min-h-0 flex-1 overflow-auto border-t">
               <Table>
                 <TableHeader>
                   <TableRow>

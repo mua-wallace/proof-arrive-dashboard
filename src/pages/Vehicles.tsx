@@ -798,7 +798,7 @@ export default function Vehicles() {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex h-[calc(100vh-7rem)] flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card/60 px-4 py-2.5">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
           <Car className="h-4 w-4 text-primary" />
@@ -964,7 +964,7 @@ export default function Vehicles() {
           </div>
         </div>
       )}
-      <Card className="rounded-xl border overflow-hidden" ref={listRef}>
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border" ref={listRef}>
         <CardHeader className="pb-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -988,7 +988,7 @@ export default function Vehicles() {
             )}
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 min-h-0 overflow-auto">
           {viewMode === 'groups' && (
             <>
           {isLoading ? (
