@@ -331,6 +331,7 @@ export interface VehicleGroup {
 
 export interface Geozone {
   id: number;
+  thirdPartyId?: number;
   name?: string;
   code?: string;
   [key: string]: unknown;
@@ -338,7 +339,7 @@ export interface Geozone {
 
 export interface CreateCenterInput {
   name: string;
-  geozoneId: number;
+  gzone_id: number;
   geozone?: string;
   fullname?: string;
   manager?: string;
@@ -776,11 +777,14 @@ export const dashboardApi = {
     return response.data;
   },
 
-  getGeozones: async (): Promise<Geozone[]> => {
-    const response = await apiClient.get<any>('/geozones');
+  getGeozones: async (params?: { page?: number; limit?: number }): Promise<Geozone[]> => {
+    const response = await apiClient.get<any>('/geozones', {
+      params: { page: params?.page ?? 1, limit: params?.limit ?? 100 },
+    });
     const raw = response.data;
     if (Array.isArray(raw)) return raw;
     if (raw && Array.isArray(raw.data)) return raw.data;
+    if (raw && Array.isArray(raw.items)) return raw.items;
     return [];
   },
 

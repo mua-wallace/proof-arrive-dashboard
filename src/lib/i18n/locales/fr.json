@@ -20,6 +20,7 @@
     "selectCenterShort": "Sélectionner un centre",
     "none": "Aucun",
     "search": "Recherche",
+    "noResults": "Aucun résultat",
     "view": "Voir",
     "edit": "Modifier",
     "actions": "Actions",
@@ -369,7 +370,17 @@
       "description": "Ajouter un nouveau centre. Seuls le nom et la géozone sont obligatoires.",
       "submit": "Créer le centre",
       "sections": {
-        "hours": "Horaires d'ouverture"
+        "general": "Général",
+        "hours": "Horaires d'ouverture",
+        "timeouts": "Délais"
+      },
+      "steps": {
+        "generalDesc": "Identifier le centre et sa géozone.",
+        "hoursDesc": "Horaires d'ouverture et pauses.",
+        "timeoutsDesc": "Limites de temps de traitement.",
+        "stepOf": "Étape {{current}} sur {{total}}",
+        "next": "Suivant",
+        "back": "Retour"
       },
       "fields": {
         "name": "Nom",
@@ -388,7 +399,8 @@
       },
       "placeholders": {
         "name": "ex. Centre 003",
-        "selectGeozone": "-- Sélectionner une géozone --"
+        "selectGeozone": "-- Sélectionner une géozone --",
+        "selectGroup": "-- Sélectionner un groupe --"
       },
       "toast": {
         "created": "Centre créé",

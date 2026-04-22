@@ -20,6 +20,7 @@
     "selectCenterShort": "Select center",
     "none": "None",
     "search": "Search",
+    "noResults": "No results",
     "view": "View",
     "edit": "Edit",
     "actions": "Actions",
@@ -369,7 +370,17 @@
       "description": "Add a new center to the system. Only name and geozone are required.",
       "submit": "Create center",
       "sections": {
-        "hours": "Working hours"
+        "general": "General",
+        "hours": "Working hours",
+        "timeouts": "Timeouts"
+      },
+      "steps": {
+        "generalDesc": "Identify the center and its geozone.",
+        "hoursDesc": "Opening hours and break schedule.",
+        "timeoutsDesc": "Processing time limits.",
+        "stepOf": "Step {{current}} of {{total}}",
+        "next": "Next",
+        "back": "Back"
       },
       "fields": {
         "name": "Name",
@@ -388,7 +399,8 @@
       },
       "placeholders": {
         "name": "e.g. Center 003",
-        "selectGeozone": "-- Select a geozone --"
+        "selectGeozone": "-- Select a geozone --",
+        "selectGroup": "-- Select a group --"
       },
       "toast": {
         "created": "Center created",
