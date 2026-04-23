@@ -277,7 +277,6 @@ export default function Centers() {
                       <TableHead className="h-8 py-1 text-[10px]">{t('centers.columns.time2')}</TableHead>
                       <TableHead className="h-8 py-1 text-[10px]">{t('centers.columns.breakStart')}</TableHead>
                       <TableHead className="h-8 py-1 text-[10px]">{t('centers.columns.breakStop')}</TableHead>
-                      <TableHead className="h-8 w-[90px] py-1 text-[10px]">{t('centers.columns.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -291,20 +290,6 @@ export default function Centers() {
                         <TableCell className="py-1.5 text-[11px] text-muted-foreground">{center.time2 ?? t('common.notAvailable')}</TableCell>
                         <TableCell className="py-1.5 text-[11px] text-muted-foreground">{center.breakstart ?? t('common.notAvailable')}</TableCell>
                         <TableCell className="py-1.5 text-[11px] text-muted-foreground">{center.breakstop ?? t('common.notAvailable')}</TableCell>
-                        <TableCell className="py-1.5">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 gap-1 px-2 text-[11px]"
-                            onClick={() => {
-                              setQueueModalCenterId(center.id);
-                              setQueueType('LOADING');
-                            }}
-                          >
-                            <ListOrdered className="h-3 w-3" />
-                            {t('centers.queueButton')}
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
