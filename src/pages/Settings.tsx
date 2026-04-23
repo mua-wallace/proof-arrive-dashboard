@@ -34,6 +34,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Car,
+  Building2 as CentersIcon,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { toast } from '@/lib/toast';
@@ -53,10 +54,13 @@ function UserDetailsCard({ user, t }: { user: CurrentUser; t: TFunction }) {
 
   const details = [
     { label: t('settings.profile.fullName'), value: displayName, icon: User },
+    { label: t('settings.profile.username'), value: user.username ?? '—', icon: User },
     { label: t('settings.profile.email'), value: user.email ?? '—', icon: Mail },
     { label: t('settings.profile.company'), value: user.company ?? '—', icon: Building2 },
+    { label: t('settings.profile.userId'), value: user.id ?? '—', icon: User },
     { label: t('settings.profile.accountId'), value: user.accid ?? '—', icon: User },
     { label: t('settings.profile.subId'), value: user.subid ?? '—', icon: User },
+    { label: t('settings.profile.memberSince'), value: user.createdAt ? formatDate(user.createdAt) : '—', icon: Calendar },
     { label: t('settings.profile.lastLogin'), value: user.lastLoginAt ? formatDate(user.lastLoginAt) : '—', icon: Calendar },
   ];
 
@@ -136,6 +140,7 @@ export default function Settings() {
 
   const [shouldFetchGroups, setShouldFetchGroups] = useState(false);
 
+
   // Fetch vehicle groups from API
   const {
     data: groupsData,
@@ -183,6 +188,30 @@ export default function Settings() {
   const handleFetchGroups = () => {
     setShouldFetchGroups(true);
   };
+
+  const syncCentersMutation = useMutation({
+    mutationFn: () =>
+      dashboardApi.getCentersFromApi({
+        page: 1,
+        limit: 100,
+        sync: true,
+      }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['centers'] });
+      const count = data?.meta?.totalItems ?? data?.data?.length ?? 0;
+      toast.success(
+        t('settings.centers.syncSuccess'),
+        t('settings.centers.syncSuccessDesc', { count })
+      );
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message
+        || error?.response?.data?.error
+        || error?.message
+        || t('settings.centers.syncErrorDefault');
+      toast.error(t('settings.centers.syncErrorTitle'), errorMessage);
+    },
+  });
 
   return (
     <div className="flex flex-col gap-3">
@@ -407,6 +436,46 @@ export default function Settings() {
                       <>
                         <RefreshCw className="h-4 w-4" />
                         {t('settings.groups.syncToDatabase')}
+                      </>
+                    )}
+                  </Button>
+                </CardFooter>
+              </Card>
+            )}
+
+            {canManageGroups && (
+              <Card>
+                <CardHeader className="p-3 pb-2">
+                  <CardTitle className="flex items-center gap-1.5 text-sm font-semibold">
+                    <CentersIcon className="h-3.5 w-3.5 text-primary" />
+                    {t('settings.centers.title')}
+                  </CardTitle>
+                  <CardDescription className="text-[11px]">
+                    {t('settings.centers.description')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-3 pt-0">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {t('settings.centers.helper')}
+                  </p>
+                </CardContent>
+                <CardFooter className="border-t bg-muted/20">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => syncCentersMutation.mutate()}
+                    disabled={syncCentersMutation.isPending}
+                    className="gap-2 flex-1"
+                  >
+                    {syncCentersMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {t('settings.centers.syncing')}
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4" />
+                        {t('settings.centers.syncCenters')}
                       </>
                     )}
                   </Button>

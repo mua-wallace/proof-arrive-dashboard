@@ -57,6 +57,7 @@ import {
   History,
   ChevronDown,
   ChevronUp,
+  AlertTriangle,
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { cn, formatRelativeTime } from '@/lib/utils';
@@ -1579,18 +1580,21 @@ export default function Vehicles() {
 
       {/* Regenerate QR Code Confirmation Dialog */}
       <Dialog open={regenerateDialogOpen} onOpenChange={setRegenerateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="border-destructive/50">
           <DialogHeader>
-            <DialogTitle>{t('vehicles.regenerateDialog.title')}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              {t('vehicles.regenerateDialog.title')}
+            </DialogTitle>
             <DialogDescription>
               {t('vehicles.regenerateDialog.description')}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-sm text-muted-foreground">
-              <strong>{t('vehicles.regenerateDialog.consequencesLabel')}</strong>
+            <p className="text-sm font-semibold text-destructive">
+              {t('vehicles.regenerateDialog.consequencesLabel')}
             </p>
-            <ul className="list-disc list-inside text-sm text-muted-foreground mt-2 space-y-1">
+            <ul className="list-disc list-inside text-sm text-destructive/90 mt-2 space-y-1">
               <li>{t('vehicles.regenerateDialog.consequence1')}</li>
               <li>{t('vehicles.regenerateDialog.consequence2')}</li>
               <li>{t('vehicles.regenerateDialog.consequence3')}</li>
@@ -1604,7 +1608,7 @@ export default function Vehicles() {
               {t('vehicles.regenerateDialog.cancel')}
             </Button>
             <Button
-              variant="default"
+              variant="destructive"
               onClick={() => {
                 if (qrSheetThirdPartyId) {
                   regenerateQrMutation.mutate(qrSheetThirdPartyId);

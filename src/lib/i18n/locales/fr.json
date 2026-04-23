@@ -301,7 +301,34 @@
       "fullname": "Nom complet",
       "email": "E-mail",
       "company": "Entreprise",
-      "lastLogin": "Dernière connexion"
+      "role": "Rôle",
+      "lastLogin": "Dernière connexion",
+      "actions": "Actions"
+    },
+    "edit": {
+      "action": "Modifier",
+      "title": "Modifier l'utilisateur",
+      "description": "Mettez à jour le nom, l'e-mail et le rôle de l'utilisateur.",
+      "fullname": "Nom complet",
+      "fullnamePlaceholder": "Jean Dupont",
+      "email": "E-mail",
+      "role": "Rôle",
+      "roleAdmin": "Administrateur",
+      "roleAgent": "Agent",
+      "save": "Enregistrer",
+      "saving": "Enregistrement...",
+      "cancel": "Annuler",
+      "confirm": "Confirmer la mise à jour",
+      "confirmTitle": "Mise à jour de l'utilisateur",
+      "confirmDescription": "Cette action met à jour le profil de l'utilisateur sélectionné. Les modifications prennent effet immédiatement et ne peuvent pas être annulées sans une nouvelle modification manuelle.",
+      "consequencesLabel": "Conséquences :",
+      "consequence1": "Le nom, l'e-mail ou le rôle de l'utilisateur sera définitivement mis à jour",
+      "consequence2": "Si le rôle change, les autorisations d'accès de l'utilisateur seront modifiées immédiatement",
+      "consequence3": "L'utilisateur devra peut-être se reconnecter pour voir les nouveaux accès",
+      "successTitle": "Utilisateur mis à jour",
+      "successDesc": "L'utilisateur a été mis à jour avec succès.",
+      "errorTitle": "Erreur lors de la mise à jour",
+      "errorDefault": "Échec de la mise à jour de l'utilisateur"
     }
   },
   "centers": {
@@ -641,10 +668,13 @@
     "profile": {
       "serverDetails": "Détails de votre compte depuis le serveur",
       "fullName": "Nom complet",
+      "username": "Nom d'utilisateur",
       "email": "E-mail",
       "company": "Entreprise",
+      "userId": "ID utilisateur",
       "accountId": "ID de compte",
       "subId": "Sous-ID",
+      "memberSince": "Membre depuis",
       "lastLogin": "Dernière connexion"
     },
     "groups": {
@@ -678,6 +708,17 @@
       "syncSuccessDesc": "Groupes de véhicules synchronisés avec succès",
       "syncErrorTitle": "Erreur de synchronisation des groupes",
       "syncErrorDefault": "Échec de la synchronisation des groupes de véhicules"
+    },
+    "centers": {
+      "title": "Synchronisation des centres",
+      "description": "Synchroniser les centres depuis l'API Malambi vers la base locale",
+      "helper": "Récupère les derniers centres depuis l'API Malambi et les met à jour dans la base de données locale.",
+      "syncCenters": "Synchroniser les centres",
+      "syncing": "Synchronisation...",
+      "syncSuccess": "Succès",
+      "syncSuccessDesc": "{{count}} centres synchronisés avec succès",
+      "syncErrorTitle": "Erreur de synchronisation des centres",
+      "syncErrorDefault": "Échec de la synchronisation des centres"
     },
     "moreOptions": {
       "title": "Plus d'options",

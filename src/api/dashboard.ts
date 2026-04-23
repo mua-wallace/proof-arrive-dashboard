@@ -117,6 +117,14 @@ export interface CurrentUser {
   [key: string]: unknown;
 }
 
+export type UserRole = 'admin' | 'agent';
+
+export interface UpdateUserRequest {
+  email?: string;
+  role?: UserRole;
+  fullname?: string;
+}
+
 export type VehicleStatus = 'available' | 'in_garage' | 'in_transit' | 'in_processing' | 'at_center' | 'unavailable';
 
 export interface Vehicle {
@@ -384,9 +392,35 @@ export const dashboardApi = {
     return response.data;
   },
 
+  /** Update a user (admin only on the server) — PATCH /users/{id} */
+  updateUser: async (id: string, data: UpdateUserRequest): Promise<CurrentUser> => {
+    const response = await apiClient.patch<CurrentUser>(`/users/${id}`, data);
+    return response.data;
+  },
+
   getCenters: async (query?: PaginateQuery): Promise<PaginateResult<any>> => {
     const response = await apiClient.get<PaginateResult<any>>('/centers', {
       params: query,
+    });
+    return response.data;
+  },
+
+  /** Get centers from Malambi API with pagination and optional sync to local DB */
+  getCentersFromApi: async (params?: {
+    page?: number;
+    limit?: number;
+    sync?: boolean;
+    search?: string;
+    sortBy?: string;
+  }): Promise<PaginateResult<any>> => {
+    const response = await apiClient.get<PaginateResult<any>>('/centers/from-api', {
+      params: {
+        page: params?.page ?? 1,
+        limit: params?.limit ?? 100,
+        sync: params?.sync ?? false,
+        search: params?.search,
+        sortBy: params?.sortBy,
+      },
     });
     return response.data;
   },

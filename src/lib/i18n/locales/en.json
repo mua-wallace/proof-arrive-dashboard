@@ -301,7 +301,34 @@
       "fullname": "Fullname",
       "email": "Email",
       "company": "Company",
-      "lastLogin": "Last Login"
+      "role": "Role",
+      "lastLogin": "Last Login",
+      "actions": "Actions"
+    },
+    "edit": {
+      "action": "Edit",
+      "title": "Edit User",
+      "description": "Update the user's name, email, and role.",
+      "fullname": "Full name",
+      "fullnamePlaceholder": "John Doe",
+      "email": "Email",
+      "role": "Role",
+      "roleAdmin": "Admin",
+      "roleAgent": "Agent",
+      "save": "Save changes",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "confirm": "Confirm Update",
+      "confirmTitle": "Update User",
+      "confirmDescription": "This action will update the selected user's profile. The changes will take effect immediately and cannot be undone without another manual edit.",
+      "consequencesLabel": "Consequences:",
+      "consequence1": "The user's name, email, or role will be permanently updated",
+      "consequence2": "If the role changes, the user's access permissions will change right away",
+      "consequence3": "The user may need to sign in again to see the updated access",
+      "successTitle": "User updated",
+      "successDesc": "The user has been updated successfully.",
+      "errorTitle": "Error updating user",
+      "errorDefault": "Failed to update user"
     }
   },
   "centers": {
@@ -641,10 +668,13 @@
     "profile": {
       "serverDetails": "Your account details from the server",
       "fullName": "Full name",
+      "username": "Username",
       "email": "Email",
       "company": "Company",
+      "userId": "User ID",
       "accountId": "Account ID",
       "subId": "Sub ID",
+      "memberSince": "Member since",
       "lastLogin": "Last login"
     },
     "groups": {
@@ -678,6 +708,17 @@
       "syncSuccessDesc": "Vehicle groups synced successfully",
       "syncErrorTitle": "Error Syncing Groups",
       "syncErrorDefault": "Failed to sync vehicle groups"
+    },
+    "centers": {
+      "title": "Centers Sync",
+      "description": "Sync centers from the Malambi API into the local database",
+      "helper": "Pulls the latest centers from the Malambi API and upserts them into the local database.",
+      "syncCenters": "Sync Centers",
+      "syncing": "Syncing...",
+      "syncSuccess": "Success",
+      "syncSuccessDesc": "{{count}} centers synced successfully",
+      "syncErrorTitle": "Error Syncing Centers",
+      "syncErrorDefault": "Failed to sync centers"
     },
     "moreOptions": {
       "title": "More options",

@@ -15,8 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Users as UsersIcon, Search, ChevronLeft, ChevronRight, ArrowUpDown, Loader2 } from 'lucide-react';
+import { Users as UsersIcon, Search, ChevronLeft, ChevronRight, ArrowUpDown, Loader2, Pencil } from 'lucide-react';
 import { formatDate, formatNumber } from '@/lib/utils';
+import { EditUserDialog } from '@/components/users/EditUserDialog';
 
 export default function Users() {
   const { t } = useTranslation();
@@ -52,6 +53,14 @@ export default function Users() {
   });
 
   const usersData = data as PaginateResult<any> | undefined;
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user'],
+    queryFn: () => dashboardApi.getCurrentUser(),
+  });
+  const isAdmin = currentUser?.role === 'admin';
+
+  const [editingUser, setEditingUser] = useState<any | null>(null);
 
   const handleSort = (field: string) => {
     const [currentField, currentDirection] = sortBy.split(':');
@@ -210,9 +219,13 @@ export default function Users() {
                       <TableHead className="h-8 py-1 text-[10px]">{t('users.columns.fullname')}</TableHead>
                       <TableHead className="h-8 py-1 text-[10px]">{t('users.columns.email')}</TableHead>
                       <TableHead className="h-8 py-1 text-[10px]">{t('users.columns.company')}</TableHead>
+                      <TableHead className="h-8 py-1 text-[10px]">{t('users.columns.role')}</TableHead>
                       <TableHead className="h-8 py-1 text-[10px]">
                         <SortButton field="lastLoginAt">{t('users.columns.lastLogin')}</SortButton>
                       </TableHead>
+                      {isAdmin && (
+                        <TableHead className="h-8 py-1 text-[10px] text-right">{t('users.columns.actions')}</TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -221,9 +234,24 @@ export default function Users() {
                         <TableCell className="py-1.5 text-xs font-medium">{user.fullname || user.fullName || t('common.notAvailable')}</TableCell>
                         <TableCell className="py-1.5 text-xs">{user.email ?? t('common.notAvailable')}</TableCell>
                         <TableCell className="py-1.5 text-xs">{user.company ?? t('common.notAvailable')}</TableCell>
+                        <TableCell className="py-1.5 text-xs">{user.role ?? t('common.notAvailable')}</TableCell>
                         <TableCell className="py-1.5 text-[11px] text-muted-foreground">
                           {user.lastLoginAt ? formatDate(user.lastLoginAt) : t('common.notAvailable')}
                         </TableCell>
+                        {isAdmin && (
+                          <TableCell className="py-1.5 text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 gap-1 text-xs"
+                              onClick={() => setEditingUser(user)}
+                              disabled={!user.id}
+                            >
+                              <Pencil className="h-3 w-3" />
+                              {t('users.edit.action')}
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -288,6 +316,16 @@ export default function Users() {
           )}
         </CardContent>
       </Card>
+
+      {isAdmin && (
+        <EditUserDialog
+          open={editingUser != null}
+          onOpenChange={(open) => {
+            if (!open) setEditingUser(null);
+          }}
+          user={editingUser}
+        />
+      )}
     </div>
   );
 }
